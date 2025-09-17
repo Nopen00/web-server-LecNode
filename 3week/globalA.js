@@ -1,0 +1,1 @@
+module.esport = () => global.message;
