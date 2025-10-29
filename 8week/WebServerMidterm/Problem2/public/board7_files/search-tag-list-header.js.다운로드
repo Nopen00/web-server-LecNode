@@ -1,0 +1,35 @@
+$(function() {
+		$.ajax({
+			  url: '/_custom/smu/_common/miniboard/jsp/searchListData.jsp'
+			, dataType: 'json'
+			, success: function(data) {
+
+				let result = data.data;
+				let htmlStr = "";
+				if( result != null ) {
+
+					for( let i =0; i < result.length; i ++){
+						let schedule = result[i];
+						let tag = schedule.tag;
+						let url = schedule.url;
+
+						htmlStr += "<li>";
+						htmlStr += "<a href='"+ url + "' title='자세히 보기'>";
+						htmlStr += tag;
+						htmlStr += "</a>";
+						htmlStr += "</li>";
+					}
+				}
+
+				if( htmlStr.length == 0 )
+					htmlStr += "<li><a href='#'>추천 검색어가 없습니다.</a></li>";
+
+				$(".srch-tag-list").empty().append( htmlStr );
+
+			},
+			
+			error: function(xhr, status, error) {
+			  console.error("AJAX 요청 중 오류가 발생했습니다:", error);
+			}
+		});
+	});

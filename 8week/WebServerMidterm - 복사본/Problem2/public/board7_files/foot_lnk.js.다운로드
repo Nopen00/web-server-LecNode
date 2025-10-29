@@ -1,0 +1,21 @@
+$(function(){
+	/* autoList */
+	var timer = null;
+	var delta = 30;
+
+	autoListOpt();
+
+	function autoListOpt(){
+	  var autoListObj = new App.autoList();
+
+	  autoListObj.init({
+		  list: ".foot-ul",
+		  endWidth: "end"
+	  });
+	}
+
+	$( window ).on( 'resize', function( ) {
+		clearTimeout( timer );
+		timer = setTimeout( autoListOpt, delta );
+	});
+});

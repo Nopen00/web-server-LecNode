@@ -1,0 +1,1029 @@
+if(!window.App) {
+	App = {};
+}
+if(!App.board){
+	App.board = {};
+}
+
+
+
+
+$(function() {
+
+	var boardApp = new App.board.Common();
+
+	boardApp.init();
+
+});
+
+$(document).on("click",".searchOption",function(e){
+
+	e.preventDefault();
+
+	var value    = $(this).attr("data-value");
+	var title    = $(this).attr("title");
+	var depth    = $(this).attr("data-depth");
+
+	$(this).parent().parent().parent().find('input').val(value);
+
+
+	// 검색 분류
+	$(this).parent().parent().parent().find("a.board-selectbox-title").text(title);
+
+	//게시종료기간 일정 다시 체크
+	$("#openEndDt").trigger("change");
+
+	// 2차 카테고리 바인딩
+	if($('#category2').length ==0) {
+		return;
+	}
+
+	$cate2 = $('#category2');
+	//$cate2.val('');
+
+
+	if( value == '' ) {
+		$("ul.2dep-category").find('li:not(:first)').remove();
+		return;
+	}
+
+
+
+	if( depth == 1 ){
+		$.ajax({
+			url: ctx+'/app/board/board.do',
+			cache: false,
+			data: {
+				mode: 'loadSubCategory',
+				mstCategoryId: value
+			},
+			dataType: 'json',
+			error: function() {
+				//$cate2.parent().spinStop();
+			},
+			success: function(data) {
+
+				//$cate2.parent().spinStop();
+
+				if(typeof(data.success) != 'undefined' && data.success == true) {
+
+					$("ul.2dep-category").find('li:not(:first)').remove();
+
+					for(var i=0; i<data.items.length; i++) {
+
+						$("ul.2dep-category").append('<li><a href="#category" class="searchOption" data-value="' + data.items[i].id + '" title="' + data.items[i].categoryNm + '">'+ data.items[i].categoryNm +'</a></li>');
+
+					}
+				}
+			}
+
+		});
+
+	}
+
+
+});
+
+
+
+App.board.Common = function() {
+
+	var self;
+
+	return {
+		init: function() {
+			self = this;
+
+			// sns 로 보내기 버튼 이벤트 바인딩
+			self.bindSendSnsBtn();
+
+			// 에디터 바인딩
+			self.bindEditor();
+
+			// 추천 반대 이벤트 바인딩
+			self.clickRecommend();
+
+			// 2차 분류 셀렉트 박스 동적 로딩
+			self.loadCategory2Depth();
+
+			// 캘린더 datepicker, class 에 calendar 가 있으면 datepicker 생성
+			self.datePicker();
+
+			// 셀렉트 박스 렌더링
+			//self.selectBox();
+
+			// 이메일 도메인 선택
+			self.bindEmailDomain();
+
+			// 공지일때 정렬번호 및 문구 여부 체크
+			self.orderNoUserCheck();
+
+			// 첨부 파일 버튼 바인딩
+			self.initAttachButton();
+
+			// 쓰기폼 유효성 체크
+			self.formValid();
+
+			// 답글 쓰기폼 유효성 체크
+			self.replyfromValid();
+
+			// 비밀번호 입력 유효성 체크
+			self.bindPassword();
+
+			// 기타 바인딩
+			self.bindEtc();
+
+			// 플래시 맵이 존재하면 메시지 출력
+			self.showFlashMessage();
+
+			// tag
+			self.tagInput();
+			
+			// defaulttag
+			self.defaultTagInput();
+				
+			// captcha
+			self.bindCaptcha();
+
+			//검색 selectBox
+			//self.searchSelect();
+
+			// selectBox  검색 ul.a li 셀렉트박스 바인딩
+			self.selectBoxBind();
+
+			// faq 클릭
+			self.faqOpen();
+
+			// 첨부 뷰어 여부 체크박스
+			self.checkViewer();
+
+			
+			self.tabCategoryEvent();
+
+			self.articleCheck();
+
+			//검색기간조정
+			self.searchDtEvent();
+
+		},
+		
+articleCheck : function(){
+			/*캠퍼스탭*/
+			$(".campus-tab-outer > ul > li > a.active").parent().addClass('on');
+			$(".btn-articlecheck").on("click", function() {
+				var boardNo = $("#etcChar4").val();
+				var articleNo = $("#etcChar11").val();
+				
+				$.post('/app/common/selectArticlePeriodOne.do', {boardNo : boardNo,articleNo:articleNo}, function(data) {
+					var codeList = data.codeList;
+					if ( codeList.length > 0 ) {
+						/*
+						$('select[name="roomCode"]').empty().append(html);*/	// 호실 셀렉트 박스 초기화
+						
+						
+						$(codeList).each(function(i) {
+							$('#articleTitle').val(codeList[i].articleTitle);
+							$('#openStartDt').val(codeList[i].etcDate1);
+							$('#openEndDt').val(codeList[i].etcDate2);
+							$('#etcChar7').val(codeList[i].etcDate1);
+							$('#etcChar8').val(codeList[i].etcDate2);
+							$('#noticeStartDt').val(codeList[i].noticeStart);
+							$('#noticeEndDt').val(codeList[i].noticeEnd);
+							$('#etcChar9').val(codeList[i].noticeStart);
+							$('#etcChar10').val(codeList[i].noticeEnd);
+							//html += '<option value="' + codeList[i].id + '">' + codeList[i].codeNm  + '</option>';
+						});
+						console.log($('#articleTitle').val());
+						//$('select[name="centerCode2"]').append(html);
+					}
+				});
+			});
+		},
+
+		tabCategoryEvent: function() {
+			$(".board-tab-outer ul.board-tab li a").on("click", function() {
+				$("input[name=srCategoryId1]").val( $(this).attr("data") );
+				
+				$("#srForm").submit();
+			});
+			
+		},
+		
+		checkViewer: function() {
+
+
+			$('.viewer-wrap iframe.web-frame').on('load',function() {
+
+				$(this).iFrameResize({
+					interval: 1000,
+					heightCalculationMethod: 'max'
+				});
+			});
+
+			$('.file-list [type=file]').change(function() {
+
+				var  ext = (this.value || '');
+
+				try {
+					ext = ext.substring( ext.lastIndexOf('.') + 1);
+				} catch(e) {}
+
+				if(ext && /pdf|xls|xlsx|hwp/i.test(ext)) {
+					$(this).next('.viewer-yn').css('display','inline-block');
+				} else {
+					$(this).next('.viewer-yn').css('display','none');
+				}
+
+			});
+
+			$('.file-list [name=chkViewerYn]').change(function() {
+
+				$(this).next('[type=hidden]').val( this.checked ? 'Y' : '' );
+
+			});
+
+		},
+
+		faqOpen : function(){
+
+
+			self = this;
+      		$box = $(".board-faq-list li");
+
+      		$box.each(function(){
+        		$(this).find("a.faqTitle").click(function(){
+
+        		  if($(this).parent().siblings(".board-faq-answer").is(":hidden")){
+			        $(this).parent().siblings(".board-faq-answer").slideDown();
+			        $(this).addClass("faq-close");
+			      }else if($(this).parent().siblings(".board-faq-answer").is(":visible")){
+			        $(this).parent().siblings(".board-faq-answer").slideUp();
+			        $(this).removeClass("faq-close");
+			      }
+
+        		});
+      		});
+
+		},
+
+
+
+		selectBoxBind : function(){
+
+
+			self = this;
+	        $box = $(".board-selectbox");
+
+  	        $box.each(function(){
+
+	          $(this).click(function(){
+
+	          	 if($(this).find("ul").is(":hidden")){
+			        $(this).find("ul").show();
+			        $(this).css({zIndex: "10"});
+			      }else if($(this).find("ul").is(":visible")){
+			        $(this).find("ul").hide();
+			        $(this).css({zIndex: "0"});
+			      }
+
+
+	          });
+	        });
+		},
+
+
+		tagInput: function() {
+			if($('input.tag').length == 0) {
+				return;
+			}
+			//기본태그 이외 추천검색어 태그가 있으면 제외
+			if($('#dtag').length > 0) {
+				return;
+			}
+			
+			$('input.tag').tagit({
+				// 자동 완성 ajax
+				allowSpaces: true,
+				autocomplete: {
+					source: function( search, showChoices ) {
+					    $.ajax({
+							dataType: 'json',
+					        url: ctx+'/cms/plugin/tag/searchTag.do',
+					        data: {
+					            'tag': search.term,
+					            'limit': 10
+					        },
+					        cache: false,
+					        success: function( json ) {
+					        	if(json.success) {
+					        		showChoices(json.items);
+					        	}
+					        }
+					    });
+					}
+				}
+			});
+
+			$('.ui-autocomplete-input').val(" + TAG");
+			$('.ui-autocomplete-input').autosizeInput();
+
+			$('.ui-autocomplete-input').focus(function(){
+					$(this).val('');
+					$(this).data('autosizeInputInstance').update();
+					$(this).css('color','#555555');
+			});
+
+			$('.ui-autocomplete-input').blur(function(){
+					$(this).val(' + TAG');
+					$(this).data('autosizeInputInstance').update();
+					$(this).css('color','blue');
+			});
+
+		},
+		defaultTagInput: function() {
+			
+			if($('#dtag').length == 0) {
+				return;
+			}
+			$('#dtag').tagit({
+				// 자동 완성 ajax
+				allowSpaces: false,
+				autocomplete: {
+					delay: 0, 
+					source: function( search, showChoices ) {
+					    $.ajax({
+							dataType: 'json',
+					        url: ctx+'/cms/plugin/tag/searchTag.do',
+					        data: {
+					            'tag': search.term,
+					            'limit': 999
+					        },
+					        cache: false,
+					        success: function( json ) {
+					        	if(json.success) {
+					        		showChoices(json.items);
+					        	}
+					        }
+					    });
+					}
+				},
+				beforeTagAdded: function(event, ui) {
+			        $.ajax({
+							dataType: 'json',
+					        url: ctx+'/cms/plugin/tag/searchTag.do',
+					        data: {
+					            'tag': ui.tagLabel,
+					            'limit': 998
+					        },
+					        cache: false,
+					        success: function( json ) {
+					        	if(json.success) {
+									 if(json.items==""){
+										$("#dtag").tagit("removeTagByLabel", ui.tagLabel);
+									 }					        	
+					        	}
+					        }
+					    });
+			        
+			       
+			    }
+			});
+			//$("#dtag").data("ui-tagit").tagInput.addClass("dtaginput");
+		
+			
+			$('.ui-autocomplete-input').val(" + 추천검색어");
+			$('.ui-autocomplete-input').autosizeInput();
+
+			$('.ui-autocomplete-input').focus(function(){
+					$(this).val('');
+					$(this).data('autosizeInputInstance').update();
+					$(this).css('color','#555555');
+			});
+
+			$('.ui-autocomplete-input').blur(function(){
+					$(this).val(' + 추천검색어');
+					$(this).data('autosizeInputInstance').update();
+					$(this).css('color','blue');
+			});
+			
+			
+			
+			if($('#defaulttag').length == 0) {
+				return;
+			}
+		
+			$('#defaulttag').tagit({
+				readOnly: true,
+				onTagClicked: function(event, ui) {
+			        // do something special
+			        $('#dtag').tagit("createTag", ui.tagLabel);
+			       // $("#dtag").data("ui-tagit").tagInput.addClass("dtaginput");
+
+			    }
+			});
+			$('#defaulttag .tagit-new').remove();
+		
+		},
+		bindEtc: function() {
+
+			// 본인글만 확인가능 메시지
+			$('a[href="#secureArticle"]').click(function(e) {
+				e.preventDefault();
+				toastr.error($m('본인만조회가능'));
+
+			});
+
+			// 게시물 삭제버튼 바인딩
+			$('.attch-del-check').click(function() {
+				var isDel = this.checked;
+				if(isDel) {
+					$(this).parent('li').addClass('deleted');
+				} else {
+					$(this).parent('li').removeClass('deleted');
+				}
+
+			});
+
+			// 처리 전 질문
+			$('a[data-confirm]').not('.adm').not('.college_schedule').click(function() {
+
+				if(confirm($m($(this).attr('data-confirm')))) {
+					return true;
+				}
+
+				return false;
+
+			});
+
+			// 리스트에서 첨부파일 modal 활성/비활성
+			$('.list-file .clip').click(function(e) {
+				e.preventDefault();
+				$('.file_downWrap').hide();
+				$(this).next().show();
+				e.stopImmediatePropagation();
+			});
+			$('.file_downWrap button.filedown_closeBtn').click(function() {
+				$(this).parent().hide();
+				$(this).parents(".file_downWrap").siblings(".clip").focus();
+			});
+
+			//게시판용 모달
+				$('.board_close_btn').on('click', function(e){
+				  e.preventDefault();
+				  const modal = $(this).parents('.board_modal');
+				  modal.fadeOut();
+				});
+			$(document).click(function(e) {
+
+				var target = $(e.target);
+				if(target.closest('.file_downWrap').length == 0) {
+					$('.file_downWrap').hide();
+				}
+			});
+
+
+		},
+		/**
+		 * 이메일 도메인 선택
+		 */
+		bindEmailDomain: function() {
+
+			$('select.email-domain').each( function() {
+				self.changeDomain( $(this) )
+			});
+
+			$('select.email-domain').change( function() {
+				self.changeDomain( $(this) );
+			});
+
+		},
+		changeDomain: function( $select ) {
+
+			var val  =  $select.val(), $input = $select.prev('input');
+
+			if(val) {
+				$input.val(val);
+			}
+
+			if(!val) {
+				// 도메인 입력필드를 텍스트 로변경
+				$input.attr('type','text');
+				setTimeout( function() {$input.focus();},100 );
+
+			} else {
+				// 도메인 입력필드를 히든으로변경
+				$input.attr('type','hidden');
+			}
+
+		},
+		/**
+		 * 플래시 맵이 존재하면 메시지 출력
+		 */
+		showFlashMessage: function() {
+
+			if( $('.flash-map').length > 0 ) {
+
+				$('.flash-map').each(function() {
+					// 이전 스크립트에서 호출 했으면 스킵
+					if(!$(this).data('flash-map')) {
+						showAlert($(this).text());
+						$(this).data('flash-map',true)
+					}
+
+				});
+
+			}
+
+		},
+		/**
+		 * sns 로 보내기 버튼 이벤트
+		 */
+		bindSendSnsBtn: function () {
+
+			$('.lsns-lnk-btn').click(function() {
+				var $this = $(this);
+				jwxe_popupWindow( $this.attr('href'), $this.attr('data-width'), $this.attr('data-height'), $this.attr('data-sns'), "yes", "yes");
+				return false;
+			});
+
+		},
+		/**
+		 * 에디터 바인딩
+		 */
+		bindEditor: function() {
+
+			$('textarea.editor').each( function( index ) {
+
+				var height = $(this).attr('data-editor-height') || 300;
+
+				var editor = initEditor({
+					height: height,
+					index: index,
+					$textarea: $(this),
+					el: this,
+					cls: 'board-view-txt'
+				});
+				$(this).data('editor', editor);
+
+
+				/*
+				var editorHeight = $(this).attr('data-editor-height') || 200;
+				var editor = initEditor(this , resPath + 'js/ck_config.js', editorHeight);
+				// 에디터를 textarea 저장소에 담아 둔다.
+				$(this).data('editor', editor);
+				*/
+
+
+			});
+
+
+		},
+		/**
+		 * 2차 분류를 동적으로 로딩 한다.
+		 */
+		loadCategory2Depth: function() {
+
+			if($('#category2').length ==0) {
+				return;
+			}
+
+			$('#category1').change(function() {
+
+					var $cate1 = $(this), $cate2 = $('#category2'), value = $cate1.val();
+
+					$cate2.val('');
+					//selectBox bug fix
+					$cate2.next('a').find('span.ui-selectBox-label').text( $cate2.find('option:eq(0)').text() );
+
+					if(!value) {
+						$cate2.find('option:not(:eq(0))').remove();
+						return;
+					}
+
+					$cate2.parent().spinStart();
+
+					$.ajax({
+						url: ctx+'/app/board/board.do',
+						cache: false,
+						data: {
+							mode: 'loadSubCategory',
+							mstCategoryId: value
+						},
+						dataType: 'json',
+						error: function() {
+							$cate2.parent().spinStop();
+						},
+						success: function(data) {
+
+							$cate2.parent().spinStop();
+
+							if(typeof(data.success) != 'undefined' && data.success == true) {
+
+								$cate2.find('option:not(:eq(0))').remove();
+
+								for(var i=0; i<data.items.length; i++) {
+
+									$cate2.append($('<option>',{
+										value: data.items[i].id,
+										text: data.items[i].categoryNm
+									}));
+
+
+								}
+
+
+							}
+						}
+
+					});
+
+			});
+
+
+		},
+
+		/**
+		 * 폼 유효성 검증
+		 */
+		formValid: function() {
+
+			// 에디터 내용을 textarea 로 옮긴다.
+			$('form[name=writeForm]').submit(function() {
+
+				$('textarea.editor').each(function() {
+
+					var editor = $(this).data('editor');
+
+					$(this).val( editor.getData() );
+
+				});
+
+				// 개인정보 보호 동의
+				if($('input[name=infoProtectYn]').length > 0) {
+					if($('input[name=infoProtectYn]:checked').val() !== 'Y') {
+						toastr.error('개인정보 보호 동의해 체크 해 주셔야만 등록이 가능합니다.')
+						return false;
+					}
+				}
+
+				// outLink 게시판 링크 유효성 체크
+				if($('#outLink').val() == 'true'){
+					// 카테고리가 있으면
+					if($('#category1').val() == 'undefined' || $('#category1').val() == ''){
+						toastr.error('"카테고리"는 필수 입력 항목입니다.');
+						$('.board-selectbox-title').focus();
+						return false;
+					}
+
+					if($('.link').val() == 'undefined' || $('.link').val() == ''){
+						toastr.error('"링크"는 필수 입력 항목입니다.');
+						$('.link').focus();
+						return false;
+					}
+				}
+
+				// 이미지 대체 텍스트 체크
+				if(  $('.img-check').length > 0 ) {
+
+					$(".img-check").each(function(i){
+
+						var $this = $(this), val = $this.val();
+
+						if(val != '') {
+
+							if ( $('.img-alt-check' + (i+1)).val() == '' ){
+
+								$('.img-alt-check' + (i+1)).addClass('jwvalid-must');
+
+							} else {
+
+								$('.img-alt-check' + (i+1)).removeClass('jwvalid-must');
+							}
+
+						}
+
+					});
+
+				}
+
+				return true;
+
+			});
+
+			$('form[name=writeForm]').formValid({
+				title: [
+					{title: 'writer',	text: $m('writer')	},
+					{title: 'emailid',	text: '이메일 아이디'	},
+					{title: 'emaildomain',	text: '이메일 도메인'	},
+					{title: 'cate1', text: '1차분류'},
+					{title: 'cate2', text: '2차분류'},
+					{title: 'category', text: $m('category')},
+					{title: 'summary', text: '요약글'},
+					{title: 'alt', text: '이미지 대체텍스트'},
+					{title: 'youtobe', text: '동영상'},
+					{title: 'img', text: '이미지'},
+					{title: 'departNm', text: '학과명'},
+					{title: 'name', text: '이름'},
+					{title: 'position', text: '직함'},
+					{title: 'thumb', text: '썸네일 이미지'}
+					
+					/* 일반게시판 */
+					,{title: 'openStart', text: '게시시작일'}
+					,{title: 'openEnd', text: '게시종료일'}
+					
+
+					/* 보도 게시판 (report) */
+					,{title: 'reportState', text: '진행상태'}
+
+					/* 교육과정 게시판 (curriculum) */
+					,{title: 'subject', text: '강좌명'}
+					,{title: 'tuition', text: '수강료'}
+
+					/* 통합공지 */
+					,{title: 'noticeType', text: '공지타입'}
+
+					/* 베너관리 */
+					,{title: 'link', text: '링크'}
+					,{title: 'content1', text: '내용1'}
+					,{title: 'content2', text: '내용2'}
+					,{title: 'content3', text: '내용3'}
+					,{title: 'startDt', text: '시작일'}
+					,{title: 'endDt', text: '종료일'}
+					,{title: 'useYn', text: '사용여부'}
+					,{title: 'target', text: '새창여부'}
+					,{title: 'enter_start_dt', text: '진입허용시작일'}
+					,{title: 'enter_end_dt', text: '진입허용종료일'}
+					,{title: 'enter_reject_message', text: '진입거절메시지'}
+
+					/* 산학협력단 */
+					,{title: 'iacf_title', text: '과제명'}
+					,{title: 'organization', text: '지원기관'}
+					,{title: 'total_research_sDt', text: '총연구시작일'}
+					,{title: 'total_research_eDt', text: '총연구종료일'}
+					,{title: 'total_funds', text: '총연구비'}
+					,{title: 'thisyear_research_sDt', text: '당해연구시작일'}
+					,{title: 'thisyear_research_eDt', text: '당해연구종료일'}
+					,{title: 'thisyear_funds', text: '당해연구비'}
+
+
+
+				],
+				alertFunction: toastr.error,
+				beforeSubmit: self.validate
+			});
+
+
+		},
+
+		replyfromValid : function(){
+
+			// 에디터 내용을 textarea 로 옮긴다.
+			$('form[name=reply-write]').submit(function() {
+
+				$('textarea.editor').each(function() {
+
+					var editor = $(this).data('editor');
+
+					$(this).val( editor.getData() );
+
+				});
+
+				return true;
+
+			});
+
+
+
+		},
+
+		/**
+		 * 공지일때 정렬 번호 및 문구 여부 체크
+		 */
+		orderNoUserCheck: function() {
+
+			if($('#topNoticeYn').length == 0) {
+				return;
+			}
+
+			var toggle = function() {
+				var checked = $('#topNoticeYn').get(0).checked;
+				if(checked) {
+					$('#order-no-user').attr('readonly','readonly').addClass('dark').val('');
+					$('.orderNoUserInfo').css('display','none');
+				} else {
+					$('#order-no-user').removeAttr('readonly').removeClass('dark');
+					$('.orderNoUserInfo').css('display','initial');
+				}
+
+			}
+
+			toggle();
+
+			//공지 여부를 체크하면 정렬번호 텍스트 박스 및 문구를 활성/비활성한다.
+			$('#topNoticeYn').click( toggle );
+
+
+		},
+		datePicker: function() {
+			if($('input.timecalendar.datetimepicker').length){
+				$('input.timecalendar.datetimepicker').appendDtpicker({'locale':'en','dateFormat':'YYYY-MM-DD hh:mm:00'}); //datetimepicker 추가
+			}
+
+			$('input.calendar').datepicker({
+				dateFormat: 'yy-mm-dd',
+				monthNames: ['01','02','03','04','05','06','07','08','09','10','11','12'],
+				monthNamesShort: ['01','02','03','04','05','06','07','08','09','10','11','12'],
+				dayNames: ['Su','Mo','Tu','We','Th','Fr','Sa'],
+				dayNamesShort: ['Su','Mo','Tu','We','Th','Fr','Sa'],
+				dayNamesMin: ['Su','Mo','Tu','We','Th','Fr','Sa'],
+				showMonthAfterYear: true,
+				buttonImageOnly: true,
+				changeMonth: true,
+				changeYear: true
+			});
+
+		},
+		selectBox: function() {
+
+			$('select').selectBox();
+			$('select').each(function(){
+			      var cls = $(this).attr('class');
+
+			      var re = /s-[\d]+-[\d]+/;
+			      var arr = re.exec(cls);
+			          if(arr) {
+			              arr = arr[0].split('-');
+			              w_flag = 'width:' + arr[1] + 'px;';
+			              h_flag = 'height:' + arr[2] + 'px';
+			              $(this).next('a').attr('style',w_flag + h_flag );
+			          }
+			});
+
+		},
+		changeAttachCount: function( cnt ) {
+
+			$('.file-list li').each(function( index ) {
+				$(this).css('display', cnt > index ? 'block':'none') ;
+			});
+
+		},
+		/**
+		 * 첨부 파일 버튼 바인딩
+		 */
+		initAttachButton: function() {
+
+			// 첨부 갯수 선택
+			self.changeAttachCount( $('#attachCnt').val() );
+			$('#attachCnt').change(function() {
+
+				self.changeAttachCount( $(this).val() );
+
+			});
+
+			// 첨부 파일이 선택되면 텍스트에 뿌려준다.
+			$('input[type=file]').change(function() {
+
+				var $this = $(this);
+
+				$this.prev('.file-prev-view').val( $this.val() );
+
+			});
+
+		},
+		bindPassword: function() {
+
+			$('form[name=password]').formValid({
+				alertFunction: toastr.error
+			});
+
+		},
+
+		/**
+		 * 추천 반대 이벤트 바인딩
+		 */
+		clickRecommend: function() {
+
+			$('.recommend').click(function(e) {
+
+				var $this = $(this), articleNo = $('input[name=articleNo]').val(), mode = $this.attr('data-type');
+
+				e.preventDefault();
+
+
+				$.ajax({
+					url:'/_common/jsp/recommend/set_point.jsp?dc='+new Date().getTime(),
+					data: {
+						mode: mode,
+						article_no: articleNo
+					},
+					dataType: 'json',
+					success: function(data) {
+						if(typeof(data.success) != 'undefined') {
+							if (data.success == true) {
+				  			//$this.html('<em>' + data.cnt + '</em>');
+							$this.parent().find(".goodCnt").text( data.cnt );
+							$this.removeClass("board-like").addClass("board-like-active");
+				  		} else {
+								if(data.msg) {
+									//alert(data.msg);
+									alert("이미 좋아요 를 클릭한 게시글 입니다.");
+								}
+							}
+						}
+					}
+				});
+
+			});
+
+
+
+		},
+
+		/**
+		 * 게시글 등록시 캡챠
+		 */
+		bindCaptcha : function() {
+
+			rand = Math.random();
+			$('#jwxe_catpcha').html('<img src="' + ctx + '/cms/CaptCha.jsp?rand=' + rand + '" style="float:left;" />');
+
+
+
+			$('#captcha_reLoad').click(function(){ self.bindCaptcha()  }); //새로고침버튼에 클릭이벤트 등록
+			$('#captcha_soundOn').click(function(){ self.bindAudioCapcha(0); });	//음성듣기버튼에 클릭이벤트 등록
+			$('#captcha_soundOnKor').click(function(){ self.bindAudioCapcha(1); }); //한글음성듣기 버튼에 클릭이벤트 등록
+
+
+
+
+		},
+		
+		searchDtEvent: function(){
+			$("#srStartDt").change(function(){
+				var srStartTimes = $("#srStartDt").datepicker('getDate');
+				var srEndTimes = $("#srEndDt").datepicker('getDate');
+				if(!srEndTimes){
+					$("#srEndDt").datepicker().datepicker("setDate", srStartTimes.getDate()+730);
+				}else{
+					srStartTimes.setDate(srStartTimes.getDate()+730);
+					if(srStartTimes < srEndTimes){
+						$("#srEndDt").datepicker().datepicker("setDate", srStartTimes);
+					}
+				}
+
+			});
+			
+			$("#srEndDt").change(function(){
+				var srEndTimes = $("#srEndDt").datepicker('getDate');
+				var srStartTimes = $("#srStartDt").datepicker('getDate');
+				if(!srStartTimes){
+					$("#srStartDt").datepicker().datepicker("setDate", srEndTimes.getDate()-730);
+				}else{
+					srStartTimes.setDate(srStartTimes.getDate()+730);
+					if(srStartTimes < srEndTimes){
+						$("#srEndDt").datepicker().datepicker("setDate", srStartTimes);
+					}
+				}
+				
+			});
+		},
+
+		/**
+		 *  캡챠 오디오 요청
+		 */
+		bindAudioCapcha : function(type){
+
+			var kor = (type > 0) ? "lan=kor&":"";
+			$.ajax({
+				url: '/_common/jsp/captcha/CaptChaAudio.jsp',
+				type: 'POST',
+				dataType: 'text',
+				data: 'rand=' + rand + '&ans=y',
+				async: false,
+				success: function(resp) {
+					var uAgent = navigator.userAgent;
+					var soundUrl = '/_common/jsp/captcha/CaptChaAudio.jsp?' + kor + 'rand=' + rand + '&ans=' + resp;
+
+					if (uAgent.indexOf('Trident') > -1 || uAgent.indexOf('MSIE') > -1) {
+						winPlayer(soundUrl+'&agent=msie');
+					} else if (!!document.createElement('audio').canPlayType) {
+						try { new Audio(soundUrl).play(); } catch(e) { winPlayer(soundUrl); }
+					} else window.open(soundUrl, '', 'width=1,height=1');
+				}
+			});
+		}
+	}
+}
+
+toastr.options = {
+		closeButton: true,
+		"debug": false,
+		"positionClass": "toast-top-right",
+		"timeOut": "3000"
+}
+
+
+function showAlert( msg ) {
+	alert(msg);
+}
+

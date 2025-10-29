@@ -1,0 +1,291 @@
+var h_events = new Array();
+
+if(!window.App) {
+	App = {};
+}
+if(!App.header){
+	App.header = {};
+}
+
+$(function() {
+
+	var mainApp = new App.header.calendar();
+
+	mainApp.init();
+
+});
+
+App.header.calendar = function() {
+
+	var self;
+
+	return {
+		init: function() {
+			self = this;
+
+			self.abc();
+
+			self.leftImg();
+		},
+		leftImg: function() {
+			$(document).on("click",".btn-main-cal", function(){
+				makeMonthCls();
+			});
+
+			$(document).on("click",".top-btn-new-wrap .btn-cal", function(){
+				makeMonthCls();
+			});
+			
+			$(document).on("click","#header_calendar button.fc-prev-button", function(){
+				makeMonthCls();
+			});
+
+			$(document).on("click","#header_calendar  button.fc-next-button", function(){
+				makeMonthCls();
+	        });
+			
+			//상단켈린더 죄측 이미지 클레스 가공 함수
+			function makeMonthCls() {
+				crtMonth = $('#header_calendar .fc-toolbar h2 ').text().substr(5,3).toLowerCase();
+				crtMonthsplit = $('#header_calendar .fc-toolbar h2').text().split(" ");
+				crtMonthimg = crtMonthsplit[1].substr(0,3).toLowerCase() + crtMonthsplit[0];
+				$('#cal-img-box').attr("class", crtMonth + " " + crtMonthimg);
+			}
+		},
+		
+		abc: function() {
+			
+			var siteId = 'kor';
+			var initYear = new Date().getFullYear();
+			var initMonth = new Date().getMonth()+1;
+			self.initCal( initYear, initMonth );
+			
+			
+			$(document).on("click","#header_calendar button.fc-prev-button", function(){
+				$(".pop-contents .chk-list input[name=schedule]").prop("checked", true);
+				
+				var date = $("#header_calendar").fullCalendar("getDate");
+				var year = date._i[0];
+				var month = date._i[1] + 1;
+				
+				if( date._i[1] == 11 ) self.initCal( year, month );
+			});
+
+			$(document).on("click","#header_calendar  button.fc-next-button", function(){
+				$(".pop-contents .chk-list input[name=schedule]").prop("checked", true);
+				
+	            var date = $("#header_calendar").fullCalendar("getDate");
+	            var year = date._i[0];
+	            var month = date._i[1] + 1;
+
+	            if( date._i[1] == 0 ) self.initCal( year, month );
+	        });
+
+
+	        $(document).on("click",".pop-contents .chk-list input[name=schedule]", function(){
+
+	        		var id = $(this).attr('id');
+
+	        		if(id == 'chk1') {
+
+					$("#header_calendar .main_uni").css("display", this.checked? "block": "none");
+
+	        		} else {
+
+					$("#header_calendar .main_event").css("display", this.checked? "block": "none");
+
+	        		}
+	        });
+	        
+	        $(document).on("click",".fc-day-top", function() {
+				var date = $(this).attr("data-date");
+				self.makeDayCal( date );
+			});
+	        
+	        $(document).on("click",".pop-cal a.close", function() {
+	        	$("#dim-cal").hide();
+	        	$(".pop-cal").hide();
+	        });
+		},
+
+		initCal : function( yArg, mArg  ) {
+			var _obj = new Object();
+
+			//if( siteId != null ) _obj["siteId"] = siteId;
+			if( yArg != null ) _obj["year"] = String(yArg);
+			
+			var boardNoList = new Array();
+			boardNoList.push( "85" );
+			boardNoList.push( "983" );
+			_obj["bachelorBoardNoList"] = boardNoList;
+
+			var yList = new Array();
+			yList.push( String(Number(yArg-1)) );
+			yList.push( String(yArg) );
+			yList.push( String(Number(yArg+1)) );
+			_obj["yList"] = yList;
+
+			var params = new Object();
+			params.sqlId = "jw.Article.selectCalendarArticle";
+			params.modelNm = "list";
+			params.jsonStr = JSON.stringify(_obj);
+
+			$.post(ctx+'/app/common/selectDataList.do', params, function(result) {
+				if(typeof(result.success) != 'undefined' && result.success == true) {
+					h_events = new Array();
+					var articleList = result.list;
+
+					for( var i = 0; i < articleList.length; i++ ) {
+						var article = articleList[i];
+						var sD = article.etcChar6;
+
+						var end = toDate(article.etcChar7);
+						end.setDate(end.getDate() + 1);
+						var eD = yyyyMMdd( end ); /// +1일
+
+						var eventType = article.etcChar8;
+						var event = article.etcChar9;
+						var con = article.articleTitle;
+						var real_eD = article.etcChar7; /// +1일
+						var articleNo= article.articleNo;
+						var boardNo= article.boardNo;
+
+						var className = "";
+						if( eventType == "bachelor" ) className = "main_uni";
+						if( eventType == "event" ) className = "main_event";
+						var eObj = new Object();
+						eObj.start = sD;
+						eObj.end = eD;
+						eObj.title= con;
+						eObj.className= className;
+						eObj.real_eD = real_eD;
+						eObj.articleNo = articleNo;
+						eObj.boardNo = boardNo;
+						h_events.push( eObj );
+					}
+
+					var isNow = false;
+					if( yArg == new Date().getFullYear() && mArg == new Date().getMonth() +1 )
+						isNow = true;
+					var initDate = new Date();
+					if( !isNow )
+						initDate = toDate( yArg + "-" + mArg + "-1" );
+
+				 	_init = {
+				 			header : {
+								left : '',
+								center : 'prev, title, next',
+								right : ''
+				 			},
+					      views: {
+								month: {
+									titleFormat: 'YYYY MMMM'
+							    }
+						  },
+					      defaultDate: initDate,
+					      navLinks: false,
+					      editable: false,
+					      eventLimit: 3,
+					      eventHeight: 20,
+					      eventLimitClick : function( cellInfo, jsEvent ) {
+					    	  self.makeDayCal( yyyyMMdd( cellInfo.date["_d"] ) );
+					      },
+					      eventClick: function(calEvent, jsEvent, view) {
+					    	  self.moveLink( calEvent );
+					     },
+					     viewRender: function(view, element) {
+					    	 $('.fc-center')[0].children[1].innerText = view.title.replace(new RegExp("undefined", 'g'), ""); 
+					    }
+					};
+					 	$('#header_calendar').fullCalendar('removeEventSources');
+						$('#header_calendar').fullCalendar(_init).fullCalendar( 'addEventSource', h_events);
+						
+						var isNow = false;
+						if( yArg == new Date().getFullYear() && mArg == new Date().getMonth() +1 )
+							isNow = true;
+						var initDate = new Date();
+						if( !isNow )
+							initDate = toDate( yArg + "-" + mArg + "-1" );
+					}
+				});
+		},
+		makeDayCal : function( ymd ) {
+			var $box = $(".pop-cal");
+			
+			var nD = toDate( ymd );
+			
+			$box.find(".tit-date").text( ymd.replaceAll("-", ".") );
+			
+			$box.find("table tbody").empty();
+			for( var i = 0; i < h_events.length; i++ ) {
+				var obj = h_events[i];
+				var sd = toDate( obj["start"] );
+				var ed = toDate( obj["real_eD"] );
+				var con = obj["title"];
+				var cate = obj["className"];
+				var articleNo = obj["articleNo"];
+				var boardNo = obj["boardNo"];
+				var moveUrl = "";
+				if( "main_uni" == cate ) {
+	  				moveUrl += "/kor/life/academicCalendar.do";
+	  			}
+	  			else if( "main_event" == cate ) {
+	  				moveUrl += "/kor/life/event.do";
+	  			}
+				
+				if( sd <= nD && nD <= ed) {
+					var htmlStr = "<tr>";
+					htmlStr += "<td scope='row'>{{period}}</td>";
+					htmlStr += "<td class='no-right'><a {{href}}>{{title}}</a></td>";
+					htmlStr += "</tr>";
+					htmlStr = htmlStr.replace("{{period}}", yyyyMMdd(sd).replaceAll("-", ".") + " ~ "  + yyyyMMdd(ed).replaceAll("-", "."));
+					htmlStr = htmlStr.replace("{{href}}", "href=" + moveUrl + "?mode=view&articleNo=" + articleNo + "&boardNo=" + boardNo);
+					htmlStr = htmlStr.replace("{{title}}", con);
+					
+					$box.find("table tbody").append( htmlStr );
+				}
+			}
+			
+			$(".pop-calendar").css("background-color","");
+			$("#dim-cal").show();
+			$box.show();
+		},
+		
+		moveLink: function( data ) {
+			var articleNo = data.articleNo;
+  			var boardNo = data.boardNo;
+  			var type = data.className[0];
+
+			var moveUrl = "/kor/life/academicCalendar.do";
+  			//var moveUrl = "";
+  			//if( "main_uni" == type ) {
+  			//	moveUrl += "/kor/life/academicCalendar.do";
+  			//}
+  			//else if( "main_event" == type ) {
+  			//	moveUrl += "/kor/life/event.do";
+  			//}
+  			moveUrl += "?mode=view&articleNo=" + articleNo + "&boardNo=" + boardNo;
+  			location.replace( moveUrl );
+		}
+	}
+};
+
+
+function toDate(dateStr) { var parts = dateStr.split("-"); return new Date(parts[0], parts[1] - 1, parts[2]); }
+function yyyyMMdd(date) { var d = new Date(date), month = '' + (d.getMonth() + 1), day = '' + d.getDate(), year = d.getFullYear(); if (month.length < 2) month = '0' + month; if (day.length < 2) day = '0' + day; return [year, month, day].join('-'); }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

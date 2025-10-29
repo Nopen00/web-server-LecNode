@@ -1,0 +1,25 @@
+INSERT INTO nodejs.users (name, age, married, comment) VALUES ('zero', 24, 0, '자기소개1');
+
+INSERT INTO nodejs.users (name, age, married, comment) VALUES ('one', 32, 1, '자기소개2');
+
+INSERT INTO nodejs.comments (commenter, comment) VALUES (1, '안녕하세요. zero의 댓글입니다.');
+
+SELECT * FROM nodejs.users;
+
+SELECT name, married FROM nodejs.users;
+
+SELECT name, age FROM nodejs.users WHERE married = 1 AND age > 30;
+
+SELECT id, name FROM nodejs.users WHERE married = 0 OR age > 30;
+
+SELECT id, name FROM nodejs.users ORDER BY age DESC;
+
+SELECT id, name FROM nodejs.users ORDER BY age DESC LIMIT 1;
+
+SELECT id, name FROM nodejs.users ORDER BY age DESC LIMIT 1 OFFSET 1;
+
+UPDATE nodejs.users SET comment = '바꿀 내용' WHERE id = 2;
+
+DELETE FROM nodejs.users WHERE id = 2;
+
+

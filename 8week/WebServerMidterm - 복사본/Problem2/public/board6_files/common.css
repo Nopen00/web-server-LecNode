@@ -1,0 +1,7 @@
+@charset "UTF-8";
+
+.path-depth-wrap .path-depth{display:none;}
+
+/* 학사일정 캘린더 */
+body.cal-bg .common-board:after{content:"";display:block;position:fixed;top:0;left:0;z-index:10;width:100%;height:100vh;background:rgba(0,0,0,0.7);}
+.fc-detail-box{position:fixed !important;}

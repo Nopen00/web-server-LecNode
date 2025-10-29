@@ -1,0 +1,17 @@
+{
+  "name": "problem2-pagination-server",
+  "version": "1.0.0",
+  "description": "Express server for board pagination",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "keywords": ["express", "pagination", "board"],
+  "author": "",
+  "license": "ISC"
+}

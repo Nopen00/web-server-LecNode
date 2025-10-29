@@ -1,0 +1,659 @@
+document.write('<link rel="stylesheet" href="/_res/board/_css/common.css"/>');
+document.write('<script src ="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/crypto-js.js"></script>');
+
+var result = 0;
+
+// Array reduce 메서드를 잘못사용해서 모든 사이트에서 오류가 나기 때문에 reduce 를 다시 정의 했다. 
+Object.defineProperty(Array.prototype, 'reduce', {
+    value: function(callback /*, initialValue*/) {
+      if (this === null) {
+        throw new TypeError( 'Array.prototype.reduce ' + 
+          'called on null or undefined' );
+      }
+      if (typeof callback !== 'function') {
+        throw new TypeError( callback +
+          ' is not a function');
+      }
+
+      // 1. Let O be ? ToObject(this value).
+      var o = Object(this);
+
+      // 2. Let len be ? ToLength(? Get(O, "length")).
+      var len = o.length >>> 0; 
+
+      // Steps 3, 4, 5, 6, 7      
+      var k = 0; 
+      var value;
+
+      if (arguments.length >= 2) {
+        value = arguments[1];
+      } else {
+        while (k < len && !(k in o)) {
+          k++; 
+        }
+
+        // 3. If len is 0 and initialValue is not present,
+        //    throw a TypeError exception.
+        if (k >= len) {
+			return 0;
+        }
+        value = o[k++];
+      }
+
+      // 8. Repeat, while k < len
+      while (k < len) {
+        if (k in o) {
+          value = callback(value, o[k], k, o);
+        }
+
+        // d. Increase k by 1.      
+        k++;
+      }
+
+      // 9. Return accumulator.
+      return value;
+    }
+  });
+
+
+$(document).ready(function(){
+	
+	
+	//대표 글씨 확대, 축소, 초기화 타이틀 
+	if( "ko" == _siteId ) {
+		$("#jwxe_zoomOut").attr("title", $("#jwxe_zoomOut").text());
+		$("#jwxe_zoomDef").attr("title", $("#jwxe_zoomDef").text());
+		$("#jwxe_zoomIn").attr("title", $("#jwxe_zoomIn").text());
+	}
+	
+	
+	// Photo gallery 이미지 사이즈 IE, EDGE(용)
+	if('objectFit' in document.documentElement.style === true) {
+		//console.log("aa");	
+	}
+	
+});
+
+
+
+$(document).ready(function(){
+	
+	
+	  /* 캠퍼스맵 640px 이하 메뉴목록 */
+	$(".map-open .btn").click(function(){
+		if( $(".map-open .btn").attr("openState") == "close" ){
+			$(".map-search").animate({"maxHeight":"0px"},600);
+			var openStr = $(".map-open .btn").attr("openStr");
+			$(".map-open .btn span").text( openStr );			
+			$(".map-open .btn").attr("openState", "open");
+		}else{
+			$(".map-search").animate({"maxHeight":"285px"},600);
+			var closeStr = $(".map-open .btn").attr("closeStr");
+			$(".map-open .btn span").text( closeStr );	
+			$(".map-open .btn").attr("openState", "close");
+		}
+	});
+	
+	/*var test = $(location).attr('pathname');
+	
+	if(test == "/ko/intro/map_ap.do"){
+		$(".map-open .btn").trigger('click');	
+		$(".map-outer .map").attr('id', 'wifi');		
+	}*/
+	
+	
+});
+
+function windowPopUp(elm) {
+	var $this = $(elm);
+	var link = $this.attr("href");
+	var popupX = (window.screen.width / 2) - (800 / 2);
+	var popOption = "";
+	popOption += " width=800, ";
+	if(link =="/board/policy/email.do"){
+		popOption += " height=500, ";
+		popOption += " scrollbars=no, ";
+		
+	}else{
+		popOption += " height=600, ";
+		popOption += " scrollbars=1, ";
+	};
+	popOption += " resizable=no, ";
+	popOption += " status=no, ";
+	popOption += " top=100, ";
+	popOption += " left=" + popupX;
+	popOption += ";";
+	
+	window.open(link,"",popOption);
+}
+
+function windowPopUp2(elm, width, height) {
+	var $this = $(elm);
+	var link = $this.attr("href");
+	var popupX = (window.screen.width / 2) - (800 / 2);
+	var popOption = "";
+	var w = width == null ? '800' : width;
+	var h = height == null ? '500' : height;
+	popOption += " width=" + w + ", ";
+	popOption += " height=" + h + ", ";
+	popOption += " scrollbars=yes, ";
+	popOption += " resizable=no, ";
+	popOption += " status=no, ";
+	popOption += " top=100, ";
+	popOption += " left=" + popupX;
+	popOption += ";";
+	
+	window.open(link,"",popOption);
+}
+
+function loginPopupOpen(){
+	
+		
+			var popOption = "width=600, height=800, resizable=no, scrollbars=no, status=no;";    
+			var popUrl = "https://www.smu.ac.kr/_custom/smu/_common/login/login_gate_sso.do";
+			//var popUrl = $(location).attr('protocol')+"//"+$(location).attr('host')+""+"/_custom/smu/_common/login/login_gate_sso.do";
+			
+			popUrl += "?loginType=popup";
+			popUrl += "&loginReferer=" + encodeURIComponent($(location).attr('protocol')+"//www.smu.ac.kr"+$(location).attr('pathname')+""+$(location).attr('search'));
+			//popUrl += "&loginReferer=" + encodeURIComponent($(location).attr('protocol')+"//"+$(location).attr('host')+""+$(location).attr('pathname')+""+$(location).attr('search'));
+			//console.log(popUrl);
+			window.open(popUrl,"",popOption);			
+		
+	
+}
+
+function logOut(){
+	var OutUrl="https://www.smu.ac.kr/_custom/smu/_common/exsignon/sso/logout.do";
+	OutUrl += "?RelayState="+encodeURIComponent($(location).attr('protocol')+"//"+$(location).attr('host')+""+$(location).attr('pathname')+""+$(location).attr('search'));
+	location.replace( OutUrl );
+}
+
+
+function loginPopupOpen_old(){
+	
+		if(/mobile|android/i.test( navigator.userAgent )){
+			location.replace( "/_custom/smu/_common/login/login_gate.do" );
+		}
+		else {
+			var popOption = "width=600, height=800, resizable=no, scrollbars=no, status=no;";    
+			var popUrl = "/_custom/smu/_common/login/login_gate.do";
+			popUrl += "?loginType=popup";
+			popUrl += "&loginReferer=" + encodeURIComponent($(location).attr('protocol')+"//"+$(location).attr('host')+""+$(location).attr('pathname')+""+$(location).attr('search'));
+
+			window.open(popUrl,"",popOption);			
+		}
+	
+}
+
+function loginPopupOpenVar(textvar){
+		alert(textvar);
+	
+		if(/mobile|android/i.test( navigator.userAgent )){
+			location.replace( "/_custom/smu/_common/login/login_gate.do" );
+		}
+		else {
+			var popOption = "width=600, height=800, resizable=no, scrollbars=no, status=no;";    
+			var popUrl = "/_custom/smu/_common/login/login_gate.do";
+			popUrl += "?loginType=popup";
+			popUrl += "&loginReferer=" + encodeURIComponent($(location).attr('protocol')+"//"+$(location).attr('host')+""+$(location).attr('pathname')+""+$(location).attr('search'));
+
+			window.open(popUrl,"",popOption);			
+		}
+	
+}
+
+educeSubmit = function(){
+	//fncEnCode(document.getElementById("UserName").value);
+		
+		/** 모바일 기기에 대해서 전송 변경 처리 시작 **/
+		if(navigator.userAgent.match(/Android|Mobile|iP(hone|od|ad)|BlackBerry|IEMobile|Kindle|NetFront|Silk-Accelerated|(hpw|web)OS|Fennec|Minimo|Opera M(obi|ini)|Blazer|Dolfin|Dolphin|Skyfire|Zune/)){
+				document.getElementById('type').value='mobile';
+			
+		}
+		/** 모바일 기기에 대해서 전송 변경 처리 끝 **/
+		document.getElementById("educeForm").submit();
+	
+}
+
+ybmSubmit = function(){
+	fncEnCode(document.getElementById("user_name").value);
+		
+		/** 모바일 기기에 대해서 전송 변경 처리 시작 **/
+		if(navigator.userAgent.match(/Android|Mobile|iP(hone|od|ad)|BlackBerry|IEMobile|Kindle|NetFront|Silk-Accelerated|(hpw|web)OS|Fennec|Minimo|Opera M(obi|ini)|Blazer|Dolfin|Dolphin|Skyfire|Zune/)){
+				document.getElementById('type').value='mobile';
+			
+		}
+		/** 모바일 기기에 대해서 전송 변경 처리 끝 **/
+		document.getElementById("ybmForm").submit();
+	
+}
+
+eduwillSubmit = function(){
+	fncEnCode(document.getElementById("UserName_client").value);
+		
+		/** 모바일 기기에 대해서 전송 변경 처리 시작 **/
+		if(navigator.userAgent.match(/Android|Mobile|iP(hone|od|ad)|BlackBerry|IEMobile|Kindle|NetFront|Silk-Accelerated|(hpw|web)OS|Fennec|Minimo|Opera M(obi|ini)|Blazer|Dolfin|Dolphin|Skyfire|Zune/)){
+			document.getElementById("eduwillForm").action ="https://smu.eduwill.net/m/member/loginSSOCheck.will";
+		}
+		/** 모바일 기기에 대해서 전송 변경 처리 끝 **/
+		document.getElementById("eduwillForm").submit();
+	
+}
+
+comentoSubmit=function(){
+		 // 입력값 가져오기
+		  const AuthKey = document.getElementById("AuthKey").value;
+		  const utm_source=document.getElementById("utm_source").value;
+		  const utm_medium=document.getElementById("utm_medium").value;
+		  const utm_campaign=document.getElementById("utm_campaign").value;
+		  const utm_term=document.getElementById("utm_term").value;
+		  const utm_content=document.getElementById("utm_content").value;
+		  const univ=document.getElementById("univ").value;
+		  const std_no=fncAesEncode(AuthKey,document.getElementById("UserID").value);
+
+		  // 동적으로 URL 생성
+		  const baseUrl = 'https://comento.kr/univ/index/smu_adm';
+		  const params = new URLSearchParams({
+			utm_source: utm_source,
+			utm_medium:utm_medium, 
+			utm_campaign: utm_campaign,
+            utm_term: utm_term,
+			utm_content: utm_content,
+			univ: univ,
+			std_no: std_no
+		  });
+		
+		const test= `${baseUrl}?${params.toString()}`;
+
+		 window.open(test,"");
+
+}
+
+fncAesEncode=function(authKey,param){
+		var key = CryptoJS.enc.Utf8.parse(authKey); // 암호화 키, 다른 곳에서 변수로 넣는걸 제안
+		var iv = CryptoJS.lib.WordArray.create([0, 0, 0, 0]);
+
+		var input = param; // 암호화 할 인풋 값
+
+		var cipherData = CryptoJS.AES.encrypt(input, key, {
+			iv: iv,
+			mode: CryptoJS.mode.CBC,
+			padding: CryptoJS.pad.Pkcs7,
+			format: CryptoJS.format.OpenSSL
+		});
+
+		var encrypted = cipherData.ciphertext.toString(CryptoJS.enc.Base64); // 암호화된 값
+		encrypted = encrypted.replace('+', 'plus');
+		encrypted = encrypted.replace('/', 'slash');
+		//console.log(encrypted);
+		return encrypted;
+}
+
+fncEnCode = function(param) {
+		var encode = '';
+		for(i=0; i<param.length; i++){
+			var len  = ''+param.charCodeAt(i);
+			var token = '' + len.length;
+			encode  += token + param.charCodeAt(i);
+		}
+		document.getElementById("UserName").value = encode;
+	}
+
+function cdrPopup(sust, year, type){
+	var popUrl = "/_custom/smu/_app/" + type + ".do?srSust=" + sust + "&srYear=" + year;
+	var popupX = (window.screen.width / 2) - (800 / 2);
+	var popOption = "";
+	popOption += " width=850, ";
+	popOption += " height=900, ";
+	popOption += " resizable=no, ";
+	popOption += " status=no, ";
+	popOption += " scrollbars=yes, ";
+	popOption += " top=100, ";
+	popOption += " left=" + popupX;
+	popOption += ";";
+	window.open(popUrl,"",popOption);
+}
+
+$(document).ready(function(){
+
+	$('.gnb-ul > li').mouseenter(function(){
+		$(".path-depth-wrap .path-depth").hide();
+		$(".path-selected").removeClass("active");
+	});	
+	
+});
+
+
+
+
+
+$(document).ready(function() {
+	
+	// 노이미지 span으로 값싼다
+	$("img[src*='no_img_logo.gif']").wrap("<span></span>")
+	
+	
+	// 링크에 있는 아이디로 이동시 gnb 영역이 가길 경우 그 영역만큼 더 이동
+	function relateSite() {		
+		/*
+		var href = location.href, idx = href.lastIndexOf('#'), id;
+	
+		if(idx > -1) {
+			id = href.substring(idx+1);
+			var $item = $('#'+id);
+			if($item.length > 0) {
+				var header = $('[class^="header-"]');
+				var t = $item.offset().top - (header.height() || 100) - 50;
+				$('html,body').stop(true, false).animate({scrollTop: t }, 1000);
+				
+			}
+		}
+		
+		*/
+		//2025 03 14 수정 특정 게시판에서 #/list에서 링크 오류가 나며 작동하지 않는 문제 
+		var href = location.href, idx = href.lastIndexOf('#'), id;
+	
+		if (idx > -1) {
+			// # 이후의 경로를 추출
+			id = href.substring(idx + 1);
+			// '/list'와 같은 잘못된 경로를 처리
+			id = id.replace('/', ''); // "/list" -> "list"
+			var $item = $('#' + id); // ID에 해당하는 요소를 찾아 length 확인 
+		
+			if ($item.length > 0) {
+				var header = $('[class^="header-"]');
+				var t = $item.offset().top - (header.height() || 100) - 50; 
+				$('html,body').stop(true, false).animate({scrollTop: t }, 1000); 
+			}
+		}
+	};
+	relateSite();
+	// 같은 페이지에서 링크 이동
+	$('.foot-sel-box a').click(function() {
+
+		var dest = location.pathname, href = $(this).attr('href'), idx = href.lastIndexOf('#');
+		if(idx > -1) {
+			dest = dest.substring(0,idx);
+		 	if(location.pathname == dest) {
+				setTimeout( relateSite, 200 );
+			}
+		}
+		
+	});
+	
+	
+	// 썸네일 게시판 이미지 오류 문제 해결
+	$('img[src*="thumb_"]').error(function() {
+		var $item = $(this);
+		var src = $item.attr('src');
+		if(src.indexOf('thumb_') > -1) {
+			setTimeout(function() {
+				$item.attr('src', src.replace('thumb_',''));
+			},50);	
+		} else {
+			
+			$item.attr('src', '/_custom/smu/resource/img/no-image-305x390.jpg');
+			$item.css({width:'100%','max-height':'100%'});
+			$item.addClass('no-img');
+		}
+		
+	});
+	
+	
+	// 첨부 다운로드경로를 컨트롤러로 변경
+	$('a[href^="/_res/"]').each(function() {
+		
+		var item = $(this), href = item.attr('href');
+		
+		if(href.indexOf('/etc/') > -1) {
+			
+			href = '/cms/fileDownload.do?path='+encodeURIComponent( href );
+			
+			item.attr('href',href);
+			
+		}
+		
+	});
+	
+	// 웹뷰어 링크 생성
+	$('[data-ext]').each( function() {
+		
+		var $item = $(this), ext = $item.attr('data-ext'),  attachNo = $item.attr('data-attach-no'), $a;
+		
+		if(/xls|xlsx|pdf|hwp/i.test(ext)) {
+			
+			$a = $('<a>').attr({
+				class: 'flexerLink',
+				href: '/flexer/index.jsp?ftype='+ext+'&attachNo='+attachNo,
+				target: '_blank',
+				title: '웹브라우저에서 확인 새창열림'
+			}); //.text('웹뷰어');
+			$a.html("<span class='hide'>웹 브라우저에서 바로보기</span>");
+			
+			$item.parent().append($a);
+			
+		}
+		
+		
+		
+	});
+	
+	
+	// 첨부파일 삭제 label 이 비어있어서 넣어준다.
+	$('span.del-file-btn').text($m('파일삭제'));
+	
+
+	// setTimeout 을 준 이유는 js 파일의 로딩 순서 때문에 마지막에 bind 되도록 하기위함
+	setTimeout(function() {
+		
+		// 모바일 1뎁스 메뉴 오류 정정
+		$(".dep1 > li > a").unbind('click').click(function() {
+
+		  if($(this).next().length == 0) {
+			  return;
+		  }
+
+
+		  if($(this).next().is(':hidden')){
+			$(this).parent().find(".dep2").show().siblings(".dep2").hide();
+			/*$(this).parent().find(".dep3").slideUp();*/
+			$(this).addClass("selected");
+			$(this).next(".dep2").show();
+			$(this).parent().siblings().find(".dep2").hide();
+			$(this).parent().siblings().find(".selected").removeClass("selected");
+		  }else{
+			/*$(this).next(".dep2").hide();
+			$(this).removeClass("selected");  */          
+		  }
+		  return false;
+		});
+		
+
+		// 모바일 2뎁스 메뉴 오류 정정
+		$(".dep2 > li > a").unbind('click').click(function() {
+			
+			var $a = $(this);
+			
+		    if($(this).next().length == 0) {
+			    return true;
+		    }
+			
+
+			if($(this).next().is(':hidden')){
+				$(".dep2 > li > a").removeClass("has-dep03-open").addClass("has-dep03-close");
+				$(this).parent().find(".dep3").slideUp().siblings(".dep3").slideDown();
+				$(this).parent().find(".dep3").slideUp().slideDown();
+				$(this).addClass("selected");
+				$(this).next(".dep3").slideDown();
+				$(this).parent().siblings().find(".dep3").slideUp();
+				//$(this).parent().siblings().find(">a").removeClass("selected");
+				$(this).removeClass("has-dep03-close").addClass("has-dep03-open");
+			}else{
+				$(this).next(".dep3").slideUp();
+				$(this).removeClass("has-dep03-open").addClass("has-dep03-close");
+			}      
+			
+			return false;
+			
+		});
+		
+	},500);
+	
+	// 메뉴 클릭 후 활성화된 서브메뉴를 selected
+	$('.gnb-ul .active').each(function() {
+		
+		$item = $(this);
+		$item.closest('.sub-mn').parent().addClass('active');
+		
+	});
+	// 게시판 타이틀에 .. 표시 버그 (크롬)
+	/*
+	$('.board-thumb-content-title a').each(function() {
+		var $item = $(this), text = $item.text();
+		if(text) {
+			text = text.trim();
+			$item.text(text);
+		}
+	});
+	*/	
+	
+});
+
+// 편집 접근성 버튼 처리 후 콜백
+
+showEditBtnCallback = function() {
+	
+	$('#jwxe_footer').after($('.jw-edit-btn-wrap'));
+	
+}
+
+/* 학과 템플릿 a,c 공지 말줄임 오류 */
+/*
+$(function() {	
+	$('.main-mini-wrap02 .mini-board-content01 li a').css('width', 'calc(100% - 35px)');
+	$('.main-mini-wrap01 .mini-board-content01 li a').css('width', 'calc(100% - 35px)');
+});
+*/
+
+$(document).ready(function(){
+	//App.boardCalendar.init();
+});
+//------------------------------------------------------
+//board calendar
+//------------------------------------------------------  
+App.boardCalendar = function(){
+	var self;
+	return {
+		init: function(){
+			self = this;
+			
+			$(document).click(".fc-event-container", function(){
+				self.onClickOpen();
+			});
+			$(".fc-detail-box .close").click(self.onClickClose);
+			
+		},
+		onClickOpen: function(){
+			if($(".fc-detail-box").is(":visible")){
+				$("body").css({overflowY: "hidden"});
+				$("body").addClass("cal-bg");	
+			}
+		},
+		onClickClose: function(){
+			$("body").css({overflowY: "auto"});
+			setTimeout(function(){
+				$("body").removeClass("cal-bg");	
+			});
+		}
+	}
+}();
+
+
+
+
+
+$(document).ready(function(){
+	$(".mapBox").each(function( mapIndex ) {
+		
+		var deptCd = $(this).attr( "data-dept-cd" );
+		var latitude = $(this).attr( "data-latitude" );
+		var longtitude = $(this).attr( "data-longtitude" );
+		var name = $(this).attr( "data-name" );
+		
+		var htmlStr = "<div class='map'>{{conBox}}</div>"
+		
+		htmlStr = htmlStr.replace( "{{conBox}}", "<div id='{{mapIdx}}' class='daumMapLocation' style='min-height:510px; width:100%;' ><div>");
+		htmlStr = htmlStr.replace( "{{mapIdx}}", "map"+mapIndex );
+		$(this).append(htmlStr);
+		
+		var params = new Object();
+		params.deptCd = deptCd;
+		params.latitude = latitude;
+		params.longtitude = longtitude;
+		params.name = name;
+		
+		
+		
+		$.post(ctx+'/app/map/selectDeptInfo.do', params, function(result) {
+			if(typeof(result.success) != 'undefined' && result.success == true) {
+				var data = result.data;
+				var latitude = data.latitude;
+				var longtitude = data.longtitude;
+				var koNm = data.ko_nm;
+				var enNm = data.en_nm;
+				//var naverMapKey = data.naverMapKey;
+				
+				if( koNm == null && enNm == null ) {
+					koNm = data.name;
+					enNm = data.name;
+				}
+				if( koNm != null && enNm == null ) {
+					enNm = koNm;
+				}
+				
+				
+				//console.log(result)
+				$.getScript( "//dapi.kakao.com/v2/maps/sdk.js?appkey=" + "c21d1b429c28134880a52f1a26be4357" + "&libraries=services&autoload=false", function() {
+					daum.maps.load(function() {
+						daumMap( "map"+mapIndex, locale == "ko" ? koNm : enNm, latitude, longtitude  );
+					});
+				});
+				
+			}
+		});						
+	});
+	
+});
+
+function daumMap( id, name, latitude, longtitude ) {
+	var iwContent = "<div style='padding:3px;font-size:12px;width:155px;text-align:center;'>{{name}}</div>".replace("{{name}}", name);
+	var position = new daum.maps.LatLng( latitude, longtitude );
+	var mapContainer = document.getElementById( id ), // 지도를 표시할 div
+		mapOption = {
+			center: position, // 지도의 중심좌표
+			level: 3 // 지도의 확대 레벨
+		};
+	// 지도를 생성합니다
+
+	var map = new daum.maps.Map(mapContainer, mapOption);
+
+	// 검색된 장소 위치를 기준으로 지도 범위를 재설정하기위해
+	// LatLngBounds 객체에 좌표를 추가합니다
+	var bounds = new daum.maps.LatLngBounds();
+	bounds.extend(position);
+
+	// 마커를 생성하고 지도에 표시합니다
+	var marker = new daum.maps.Marker({
+		map: map,
+		position: position
+	});
+
+	var infowindow = new daum.maps.InfoWindow({
+		zIndex:1,
+		position : position,
+		content : iwContent
+	});
+
+	infowindow.open(map, marker);
+	
+}

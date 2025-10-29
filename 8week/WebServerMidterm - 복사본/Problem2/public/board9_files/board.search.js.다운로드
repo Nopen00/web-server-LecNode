@@ -1,0 +1,10 @@
+document.querySelectorAll('.searchOption').forEach(function (el) {
+    el.addEventListener('click', function () {
+        var value = this.dataset.value;
+        var text = this.textContent.trim();
+		//접근성을 위한 라벨텍스트 지정
+        document.getElementById('search_key').value = value;
+        document.getElementById('searchKeyLabel').textContent = text;
+        document.querySelector('.board-selectbox-title').textContent = text;
+    });
+});

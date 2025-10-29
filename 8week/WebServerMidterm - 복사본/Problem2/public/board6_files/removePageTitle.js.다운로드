@@ -1,0 +1,17 @@
+  $(document).ready(function() {
+	  // 게시판의 경우 계속 중복된 국문 표기가 붙어 제거. 250610
+    const originalTitle = document.title;
+    const suffix = "| 상명대학교 국문";
+    let cleanedTitle = originalTitle;
+
+    if (originalTitle && originalTitle.endsWith(suffix)) {
+      cleanedTitle = originalTitle.slice(0, -suffix.length).trim();
+    }
+
+    document.title = cleanedTitle;
+
+    const titleEl = document.getElementById("dynamicTitle");
+    if (titleEl) {
+      titleEl.innerText = cleanedTitle;
+    }
+  });

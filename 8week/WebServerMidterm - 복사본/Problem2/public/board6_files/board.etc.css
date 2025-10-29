@@ -1,0 +1,4 @@
+@charset "UTF-8";
+
+.captcha.captchaRefresh {background: url("../img/captcha_refresh.png") no-repeat ;width: 16px; height: 16px; display: inline-block;} 
+.captcha.captchaSound {background: url("../img/captcha_volume.png") no-repeat ;width: 16px; height: 16px; display: inline-block;}

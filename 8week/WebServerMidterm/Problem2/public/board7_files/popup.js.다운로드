@@ -1,0 +1,268 @@
+$(document).ready(function(){
+	//======================================================================
+	// 실행 오브젝트 목록
+	//======================================================================
+
+$('img[usemap]').rwdImageMaps();
+	// 레이어팝업 
+	App.layerPopup.init({
+		openPopupAfter: function() {
+			// User-defined functions
+		}
+	});
+});
+//------------------------------------------------------
+//레이어팝업 
+//------------------------------------------------------  
+App.layerPopup = function () {
+	var self
+	var settings // 초기값 세팅
+	var $selector;
+	var popupWrap, isPopupOpen, openBtn, closeBtn, allCloseBtn, toolTip, activeClass, scrollFix, scrollContent, btnCloseOnly, doublePopup, speed, openOnHover;
+	var openPopupClass, popupAccess, closePopup;
+	return {
+		init: function (opt) {
+			self = this;
+			// 기본 옵션 정의
+			settings = $.extend({
+				popupWrap: 'js-popup-wrap', //팝업 레이아웃 클래스
+				openBtn: 'js-popup-open', //팝업 버튼 클래스 
+				closeBtn: 'js-popup-close', //팝업 닫기 버튼 클래스
+				allCloseBtn: 'js-popup-close-all', //팝업 닫기 버튼 클래스
+				toolTip: 'tooltip', //툴팁 타입
+				activeClass: 'active', //팝업 활성시 클래스
+				scrollFix: true, //기본 - false / window 스크롤 고정 - true ('fixed' 클래스 부여)
+				scrollContent: false, //내부 스크롤 - false / 외부스크롤 - true ('outer-scroll' 클래스 부여)
+				btnCloseOnly: false, // 영역 외 클릭 시 닫기, esc 닫기 - false / 적용 안함 - true
+				doublePopup: false, // 이중 팝업 사용 여부 -> 클릭한 팝업 열릴 때 다른 팝업 닫힘(이중팝업 사용 유의) - false / 클릭한 팝업 모두 열림(툴팁 사용 유의) - true
+				speed: 'fast', //효과 속도 - 숫자, 'fast', 'slow'
+				openOnHover: true,
+			}, opt)
+
+			$selector = $(this);
+			popupWrap = settings.popupWrap;
+			openBtn = settings.openBtn;
+			closeBtn = settings.closeBtn;
+			allCloseBtn = settings.allCloseBtn;
+			toolTip = settings.toolTip;
+			activeClass = settings.activeClass;
+			scrollFix = settings.scrollFix;
+			scrollContent = settings.scrollContent;
+			btnCloseOnly = settings.btnCloseOnly;
+			doublePopup = settings.doublePopup;
+			speed = settings.speed;
+			openOnHover = settings.openOnHover;
+
+			// 팝업 실행
+			self.openPopup(opt)
+
+		},
+		// 레이어 팝업 열기
+		openPopup:function (opt) {
+			$(document).on('click', '.' + openBtn, function(e){
+
+				var popupType = $(this).data('popup-type');
+				var popupEl = $('body').find("[data-popup-type='" + popupType + "']:not('a, button, :input[type=button]')");
+				var popupDim = $('body').find("[data-popup-type='" + popupType + "']:not('.tooltip, a, button, :input[type=button]')");
+
+				openPopupClass = $(this).data('popup-type') + '-open'
+				$('body').find("[data-popup-type='" + popupType + "']").fadeIn(speed);
+				popupEl.addClass(activeClass);
+				$('body').addClass(openPopupClass);
+
+				/* 팝업 클릭시 열려 있던 팝업 닫기 - 이중 팝업일 때 툴팁 사용 X */
+				if(doublePopup === false){
+					$('body').find('.'+popupWrap+'.' + activeClass).not(popupEl).fadeOut(speed);
+					var otherPopup = JSON.stringify($('.'+popupWrap+'.' + activeClass).not(popupEl).data('popup-type'))
+					if(typeof otherPopup !== "undefined"){
+						var unQutesFirst = otherPopup.replace('"','');
+						var unQutesLast = unQutesFirst.replace('"','');
+						$('.'+popupWrap+'.' + activeClass).not(popupEl).removeClass(activeClass);
+						$('body').removeClass(unQutesLast + '-open');
+					}
+				}
+				/* 외부 스크롤 적용 */
+				if(scrollContent === true){
+					$('body').addClass('outer-scroll');					
+				}
+
+				/* 닫기 , 웹접근성 포커스 적용 */
+				self.popupAccess($('body').find("[data-popup-type='" + popupType + "']:not('a, button, :input[type=button]')"), $(this));
+
+				/* 레이어 팝업 오픈시 스크롤 고정 (툴팁은 적용 하지 않음) */
+				if(scrollFix === true){
+					if (!(popupType.startsWith(toolTip))) {
+						$('body').addClass('fixed');
+					}
+				}
+
+				function closePcGnb() { //PC Gnb 닫기
+					$('.gnb > ul > li').removeClass('active');
+					$('body').removeClass('gnb-open');
+				}
+				function closeMobileGnb() { //Mobile Gnb 닫기
+					$('.slideMenu').removeClass('on');
+					$('html, body').removeClass('all-fixed');
+					$('.m-gnb-bg').hide();
+				}
+
+				function closeGnb() {
+					if($('body').hasClass('gnb-open') && $('body').hasClass('all-fixed')) { //pc Gnb를 연 상태로 모바일 브라우저 크기로 줄였을 때 
+						closePcGnb();
+						closeMobileGnb();
+					} else if($('body').hasClass('gnb-open')) { //pc Gnb 닫기
+						closePcGnb();
+					} else if($('body').hasClass('all-fixed')) { //mobile Gnb 닫기
+						closeMobileGnb();
+					} 
+				}
+
+				if($(this).hasClass('btn-srch')) { //헤더에 통합검색 팝업 
+					closeGnb();
+				} else if ($(this).hasClass('btn-custom-menu')) { //자주 가는 메뉴 팝업
+					closeGnb();
+				} else if ($(this).hasClass('btn-pop')) { //sm 팝업
+					closeGnb();
+				} else if ($(this).hasClass('btn-main-cal')) { //sm 팝업
+					closeGnb();
+				}
+
+			});
+			if(opt.openPopupAfter) {
+				opt.openPopupAfter();
+			}
+		},
+		// 레이어 팝업 웹 접근성 준수 (포커스 이동)
+		popupAccess: function (selector, returnElement) {
+			var popupChildEl = $(selector).children('div');
+
+			if($(selector).find('.main-calendar-wrap').length > 0){
+				btnCloseOnly = true;
+			}else{
+				btnCloseOnly = false;
+			}
+			
+			if($(selector).find(':focusable').length > 0) {
+				var focusElLeng = $(selector).find(':focusable').length - 1;
+
+				$(selector).find(':focusable').eq(0).addClass('popup-layer-first-child').attr('tabIndex', 0);
+				$(selector).find(':focusable').eq(focusElLeng).addClass('popup-layer-last-child');
+
+				$(selector).attr({
+					'tabIndex': 0
+				}).focus();
+			};
+
+			$('.popup-layer-last-child').on('blur', function() {
+				$(selector).find('.popup-layer-first-child').focus();
+				/* 상명대 sm 팝업에 포커스 시 충돌나는 소스가 있어 한번 더 실행 처리함 */
+				setTimeout(function() {
+					$(selector).find('.popup-layer-first-child').focus();
+				},200);
+			});
+
+			/* 닫기 */
+			$(selector).find('.' + closeBtn).on('click', function () {  
+				var closePopupEl = $(this).closest('.' + popupWrap);
+				popupClose(closePopupEl);   
+				self.closePopup(closePopupEl); 
+			});
+			/* 전체 닫기 */
+			$(selector).find('.' + allCloseBtn).on('click', function () {  
+				popupClose('.' + popupWrap);   
+				$('.' + popupWrap).removeClass(activeClass).fadeOut(speed);	
+				$('body').removeClass('fixed');
+				$('body').removeClass(openPopupClass);
+			});
+			/* keyboard enter로 팝업 닫기 */
+			$(selector).find('.' + closeBtn).keydown(function (e) {
+				var enterClosePopupEl = $(this).closest('.' + popupWrap);
+				if (e.keyCode == 13) {
+					if($('.' + closeBtn).hasClass('btn-srch-close')) { //통합검색 팝업창 enter로 닫을 때 submit되는 현상 제어
+						e.preventDefault();
+					}
+					popupClose(enterClosePopupEl);
+					self.closePopup(enterClosePopupEl);
+				}
+			});
+
+			/* 영역 외 클릭시 팝업 닫기 */
+			$(document).mouseup(function(e) { 
+				function closePopupWhenClickOutside() {
+					if($(selector).is(':visible')){
+						popupClose(selector);   
+						self.closePopup(selector);
+					}
+				}
+				if(btnCloseOnly === false){ // 옵션 false 시 실행
+					if($(selector).hasClass('tooltip')) { //툴팁팝업일 때
+						if($(selector).has(e.target).length === 0){
+							closePopupWhenClickOutside();
+						} 
+					} else {
+						if($('.' + popupWrap).has(e.target).length === 0){
+							closePopupWhenClickOutside();
+						} 
+					}
+				}
+			}); 
+			/* 레이어 팝업 내 레이어 버튼이 없을 경우 영역외 클릭 닫기 버블링 막기 */
+			if($(popupChildEl).find('.' + openBtn).length === 0) {
+				$(popupChildEl).click(function(e){
+					if(btnCloseOnly === false){ // 옵션 false 시 실행
+						e.stopPropagation();
+					}
+				});
+			}
+
+			/* ESC로 팝업 닫기 */
+			$(document).keydown(function (e) {
+				if(btnCloseOnly === false){ // 옵션 false 시 실행
+					if (e.keyCode == 27){
+						if($(selector).is(':visible')){
+							popupClose(selector);   
+							self.closePopup(selector);
+						}
+					}
+				}
+			});
+
+			// 레이어팝업 닫기
+			function popupClose(removeElement) {
+				$(returnElement).focus();
+				$('.popup-layer-first-child').removeAttr('tabIndex').removeClass('popup-layer-first-child');
+				$('.popup-layer-first-last').removeClass('popup-layer-first-last');
+			}
+		},
+		closePopup: function (closePopupEl)  {
+			// 열려 있는 팝업 수
+			var layerLeng = $(document).find('.' + popupWrap + ':visible').length;
+			var closePopupElData = $(closePopupEl).data('popup-type');
+			$(closePopupEl).removeClass(activeClass).fadeOut(speed);	
+			$('body').removeClass(closePopupElData + '-open');
+			// 마지막 팝업이 닫힐 때 dim, fixed 해제
+			if(layerLeng === 1){ 
+				$('.cms-popup-outer').removeClass('on');
+				$('body').removeClass('fixed');
+
+			}
+			
+			// 상명대 sm 팝업일 경우 예외 적용 
+			if(closePopupElData == 'sm-popup') {
+				$('.main-pop-bg').hide();
+				$('.main-pop-outer').removeClass('active show');
+				$('body').removeClass('over-hidden');
+				//모바일 SM팝업 버튼 removeClass
+				$('.m-btn-pop-wrap').removeClass('active');
+			}
+			
+			// 상명대 캘린더 일 경우 예외 적용
+			if(closePopupElData == 'custom-calendar-popup') {
+				$('.main-calendar-bg').hide();
+				$('.main-calendar-outer').removeClass('active show');
+				$('body').removeClass('over-hidden');
+			}
+				
+		}
+	}
+}();
