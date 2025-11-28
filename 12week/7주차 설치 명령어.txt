@@ -1,0 +1,50 @@
+mongod
+
+mongo
+
+use admin
+
+db.createUser({ user : '이름', pwd : '비밀번호', roles: ['root'] })
+
+use nodejs
+show dbs
+db
+
+db.createCollection('users')
+db.createCollection('comments')
+show collections
+
+mongo
+use nodejs;
+db.user.save({ name: 'zero', age: 24, married: false, comment: '안녕하세요. 간단히 몽고디비 사용 방법에 대해 알아봅시다.', createdAt: new Date() });
+
+db.user.save({ name: 'nero', age: 32, married: true, comment: '안녕하세요. zero 친구 nero입니다.', createdAt: new Date() });
+
+db.users.find({ name: 'zero'}, {_id:1})
+
+db.comments.save({ commenter: ObjectId( '복붙'), comment: '안녕하세요. zero의 댓글립니다.', createAt: new Date() });
+
+db.users.find({});
+
+db.comments.find({});
+
+db.users.fine({}, {_id:0, name:1, married:1});
+
+db.users.fine({ age: {$gt:30}, married:true}, {_id:0, name:1, age:1});
+
+db.users.fine({ $or: [{age: {$gt:30}}, {married:true}] }, {_id:0, name:1, age:1});
+
+db.users.fine({}, {_id:0, name:1, age:1}).sort({ age: -1});
+
+db.users.fine({}, {_id:0, name:1, age:1}).sort({ age: -1}).limit(1);
+
+db.users.fine({}, {_id:0, name:1, age:1}).sort({ age: -1}).limit(1).skip(1);
+
+db.users.update({name: 'nero'}, { $set:{comment: '안녕하세요. 이 필드를 바꿔보겠습니다!' }});
+
+db.users.remove({name: 'nero'});
+
+npm i express morgan nunjucks mongoose
+npm i -D nodemon
+
+npm start
