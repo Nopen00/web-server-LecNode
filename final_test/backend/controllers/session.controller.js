@@ -1,6 +1,7 @@
-import { ClassSession, Course } from '../models/index.js';
+import { ClassSession, Course, Enrollment, Attendance } from '../models/index.js';
 import { generateAttendanceCode } from '../utils/attendanceCode.js';
 import { createAuditLog } from '../middleware/auditLog.js';
+import { Op } from 'sequelize';
 
 export const getSessionsByCourse = async (req, res, next) => {
   try {
@@ -30,9 +31,9 @@ export const getSessionsByCourse = async (req, res, next) => {
 export const createSession = async (req, res, next) => {
   try {
     const { courseId } = req.params;
-    const { week, session_number, start_at, end_at, room, attendance_method, attendance_duration, is_holiday, is_makeup } = req.body;
+    const { week, start_at, room, attendance_method, attendance_duration, is_holiday, is_makeup } = req.body;
 
-    if (!week || !session_number || !start_at || !end_at) {
+    if (!week || !start_at) {
       return res.status(400).json({ error: 'Required fields are missing' });
     }
 
@@ -47,42 +48,58 @@ export const createSession = async (req, res, next) => {
       return res.status(403).json({ error: 'You can only create sessions for your own courses' });
     }
 
-    // 날짜 유효성 검증
-    const start = new Date(start_at);
-    const end = new Date(end_at);
-    if (start >= end) {
-      return res.status(400).json({ error: 'Start time must be before end time' });
-    }
-
-    // 출석 시간 검증
-    if (attendance_duration !== undefined && (attendance_duration < 3 || attendance_duration > 15)) {
-      return res.status(400).json({ error: 'Attendance duration must be between 3 and 15 minutes' });
-    }
-
-    const session = await ClassSession.create({
-      course_id: courseId,
-      week,
-      session_number,
-      start_at,
-      end_at,
-      room: room || null,
-      attendance_method: attendance_method || 'code',
-      attendance_duration: attendance_duration || 10,
-      is_holiday: is_holiday || false,
-      is_makeup: is_makeup || false
+    // 이미 해당 주차에 세션이 있는지 확인
+    const existingSessions = await ClassSession.findAll({
+      where: {
+        course_id: courseId,
+        week: week
+      }
     });
+
+    if (existingSessions.length > 0) {
+      return res.status(400).json({ error: 'Sessions for this week already exist' });
+    }
+
+    // 수업 시간에 따라 자동으로 세션 생성
+    const totalMinutes = (course.duration_hours || 3) * 60 + (course.duration_minutes || 0);
+    const sessionDuration = 60; // 1교시 = 60분
+    const totalSessions = Math.ceil(totalMinutes / sessionDuration);
+
+    const start = new Date(start_at);
+    const createdSessions = [];
+
+    for (let i = 1; i <= totalSessions; i++) {
+      const sessionStart = new Date(start.getTime() + (i - 1) * 60 * 60000); // (i-1) * 60분
+      const sessionEnd = new Date(sessionStart.getTime() + 60 * 60000); // 60분 후
+
+      const session = await ClassSession.create({
+        course_id: courseId,
+        week,
+        session_number: i,
+        start_at: sessionStart,
+        end_at: sessionEnd,
+        room: room || course.room || null,
+        attendance_method: attendance_method || 'code',
+        attendance_duration: attendance_duration || 10,
+        is_holiday: is_holiday || false,
+        is_makeup: is_makeup || false,
+        status: 'scheduled'
+      });
+
+      createdSessions.push(session);
+    }
 
     // 감사 로그 기록
     await createAuditLog(
       req,
       'session_create',
       'ClassSession',
-      session.id,
+      createdSessions[0].id,
       null,
-      { week, session_number, start_at, end_at, attendance_method: attendance_method || 'code' }
+      { week, total_sessions: totalSessions, start_at, attendance_method: attendance_method || 'code' }
     );
 
-    res.status(201).json(session);
+    res.status(201).json(createdSessions);
   } catch (error) {
     next(error);
   }
@@ -238,6 +255,47 @@ export const openSession = async (req, res, next) => {
 
     await session.save();
 
+    // 기본 시간만큼 세션 자동 생성 (1교시만 있는 경우)
+    const course = session.course;
+    const totalMinutes = (course.duration_hours || 3) * 60 + (course.duration_minutes || 0);
+    const sessionDuration = 60; // 1교시 = 60분
+    const totalSessions = Math.ceil(totalMinutes / sessionDuration);
+
+    // 같은 주차의 세션이 1개만 있고, 총 세션 수가 1개보다 많은 경우 자동 생성
+    const existingSessions = await ClassSession.findAll({
+      where: {
+        course_id: session.course_id,
+        week: session.week
+      },
+      order: [['session_number', 'ASC']]
+    });
+
+    if (existingSessions.length === 1 && totalSessions > 1) {
+      // 나머지 세션들 자동 생성
+      const sessionStart = new Date(session.start_at);
+      const sessionEnd = new Date(session.end_at);
+      const sessionInterval = sessionEnd.getTime() - sessionStart.getTime(); // 1교시 간격
+
+      for (let i = 2; i <= totalSessions; i++) {
+        const newSessionStart = new Date(sessionStart.getTime() + (i - 1) * sessionInterval);
+        const newSessionEnd = new Date(newSessionStart.getTime() + sessionInterval);
+
+        await ClassSession.create({
+          course_id: session.course_id,
+          week: session.week,
+          session_number: i,
+          start_at: newSessionStart,
+          end_at: newSessionEnd,
+          room: session.room,
+          attendance_method: session.attendance_method,
+          attendance_duration: session.attendance_duration,
+          is_holiday: session.is_holiday,
+          is_makeup: session.is_makeup,
+          status: 'scheduled'
+        });
+      }
+    }
+
     // 감사 로그 기록
     await createAuditLog(
       req,
@@ -310,6 +368,37 @@ export const closeSession = async (req, res, next) => {
     session.status = 'closed';
     await session.save();
 
+    // 출석한 학생 목록 가져오기
+    const enrollments = await Enrollment.findAll({
+      where: { course_id: session.course_id }
+    });
+    const enrolledStudentIds = enrollments.map(e => e.user_id);
+
+    const attendedStudents = await Attendance.findAll({
+      where: { session_id: id }
+    });
+    const attendedStudentIds = attendedStudents.map(a => a.student_id);
+
+    // 출석하지 않은 학생들 자동 결석 처리
+    const absentStudentIds = enrolledStudentIds.filter(sid => !attendedStudentIds.includes(sid));
+    
+    for (const studentId of absentStudentIds) {
+      // 이미 출석 기록이 있는지 확인 (중복 방지)
+      const existing = await Attendance.findOne({
+        where: { session_id: id, student_id: studentId }
+      });
+
+      if (!existing) {
+        await Attendance.create({
+          session_id: id,
+          student_id: studentId,
+          status: 3, // 결석
+          checked_at: new Date(),
+          late_minutes: 0
+        });
+      }
+    }
+
     // 감사 로그 기록
     await createAuditLog(
       req,
@@ -317,7 +406,7 @@ export const closeSession = async (req, res, next) => {
       'ClassSession',
       session.id,
       { status: oldStatus },
-      { status: 'closed' }
+      { status: 'closed', auto_absent_count: absentStudentIds.length }
     );
 
     res.json(session);

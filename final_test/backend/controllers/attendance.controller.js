@@ -88,6 +88,40 @@ export const attendSession = async (req, res, next) => {
       location: location || null
     });
 
+    // 1교시 출석 시 같은 주차의 다른 세션들도 자동 출석 처리
+    if (session.session_number === 1) {
+      const sameWeekSessions = await ClassSession.findAll({
+        where: {
+          course_id: session.course_id,
+          week: session.week,
+          session_number: { [Op.gt]: 1 } // 2교시 이후
+        },
+        order: [['session_number', 'ASC']]
+      });
+
+      for (const nextSession of sameWeekSessions) {
+        // 이미 출석 기록이 있는지 확인
+        const existingAttendance = await Attendance.findOne({
+          where: {
+            session_id: nextSession.id,
+            student_id: studentId
+          }
+        });
+
+        if (!existingAttendance) {
+          // 같은 상태로 자동 출석 처리 (1교시가 출석이면 2,3교시도 출석)
+          await Attendance.create({
+            session_id: nextSession.id,
+            student_id: studentId,
+            status: status, // 1교시와 같은 상태
+            checked_at: now,
+            late_minutes: 0, // 연속 출석이므로 지각 없음
+            location: location || null
+          });
+        }
+      }
+    }
+
     res.status(201).json(attendance);
   } catch (error) {
     if (error.name === 'SequelizeUniqueConstraintError') {

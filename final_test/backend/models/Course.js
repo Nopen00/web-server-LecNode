@@ -50,6 +50,26 @@ const Course = sequelize.define('Course', {
   room: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+  duration_hours: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 3,
+    validate: {
+      min: 1,
+      max: 6
+    },
+    comment: '수업 시간 (1~6시간)'
+  },
+  duration_minutes: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+    validate: {
+      min: 0,
+      max: 30
+    },
+    comment: '추가 시간 (0 또는 30분)'
   }
 }, {
   tableName: 'Courses',

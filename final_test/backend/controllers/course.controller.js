@@ -78,7 +78,7 @@ export const getCourseById = async (req, res, next) => {
 
 export const createCourse = async (req, res, next) => {
   try {
-    const { title, code, section, instructor_id, semester_id, department_id, room } = req.body;
+    const { title, code, section, instructor_id, semester_id, department_id, room, duration_hours, duration_minutes } = req.body;
     
     if (!title || !code || !section || !instructor_id || !semester_id || !department_id) {
       return res.status(400).json({ error: 'Required fields are missing' });
@@ -86,6 +86,16 @@ export const createCourse = async (req, res, next) => {
 
     if (section < 1 || section > 4) {
       return res.status(400).json({ error: 'Section must be between 1 and 4' });
+    }
+
+    // 수업 시간 검증
+    const hours = duration_hours || 3;
+    const minutes = duration_minutes || 0;
+    if (hours < 1 || hours > 6) {
+      return res.status(400).json({ error: 'Duration hours must be between 1 and 6' });
+    }
+    if (minutes !== 0 && minutes !== 30) {
+      return res.status(400).json({ error: 'Duration minutes must be 0 or 30' });
     }
 
     // 교원이 Instructor인지 확인
@@ -125,7 +135,9 @@ export const createCourse = async (req, res, next) => {
       instructor_id,
       semester_id,
       department_id,
-      room: room || null
+      room: room || null,
+      duration_hours: hours,
+      duration_minutes: minutes
     });
 
     const courseWithRelations = await Course.findByPk(course.id, {
@@ -143,7 +155,7 @@ export const createCourse = async (req, res, next) => {
       'Course',
       course.id,
       null,
-      { title, code, section, instructor_id, semester_id, department_id, room }
+      { title, code, section, instructor_id, semester_id, department_id, room, duration_hours: hours, duration_minutes: minutes }
     );
 
     res.status(201).json(courseWithRelations);
@@ -158,7 +170,7 @@ export const createCourse = async (req, res, next) => {
 export const updateCourse = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { title, code, section, instructor_id, semester_id, department_id, room } = req.body;
+    const { title, code, section, instructor_id, semester_id, department_id, room, duration_hours, duration_minutes } = req.body;
 
     const course = await Course.findByPk(id);
     if (!course) {
@@ -210,6 +222,18 @@ export const updateCourse = async (req, res, next) => {
       course.department_id = department_id;
     }
     if (room !== undefined) course.room = room;
+    if (duration_hours !== undefined) {
+      if (duration_hours < 1 || duration_hours > 6) {
+        return res.status(400).json({ error: 'Duration hours must be between 1 and 6' });
+      }
+      course.duration_hours = duration_hours;
+    }
+    if (duration_minutes !== undefined) {
+      if (duration_minutes !== 0 && duration_minutes !== 30) {
+        return res.status(400).json({ error: 'Duration minutes must be 0 or 30' });
+      }
+      course.duration_minutes = duration_minutes;
+    }
 
     // 중복 체크 (코드와 분반이 같은 경우)
     if (code || section !== undefined || semester_id) {
@@ -250,7 +274,9 @@ export const updateCourse = async (req, res, next) => {
         instructor_id: course.instructor_id,
         semester_id: course.semester_id,
         department_id: course.department_id,
-        room: course.room
+        room: course.room,
+        duration_hours: course.duration_hours,
+        duration_minutes: course.duration_minutes
       }
     );
 

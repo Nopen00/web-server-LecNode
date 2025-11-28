@@ -18,7 +18,9 @@ const CourseManagement = () => {
     instructor_id: '',
     semester_id: '',
     department_id: '',
-    room: ''
+    room: '',
+    duration_hours: 3,
+    duration_minutes: 0
   });
   const [error, setError] = useState('');
 
@@ -62,7 +64,7 @@ const CourseManagement = () => {
       }
       setShowForm(false);
       setEditingId(null);
-      setFormData({ title: '', code: '', section: 1, instructor_id: '', semester_id: '', department_id: '', room: '' });
+      setFormData({ title: '', code: '', section: 1, instructor_id: '', semester_id: '', department_id: '', room: '', duration_hours: 3, duration_minutes: 0 });
       fetchData();
     } catch (error) {
       setError(error.response?.data?.error || '저장에 실패했습니다.');
@@ -77,7 +79,9 @@ const CourseManagement = () => {
       instructor_id: course.instructor_id.toString(),
       semester_id: course.semester_id.toString(),
       department_id: course.department_id.toString(),
-      room: course.room || ''
+      room: course.room || '',
+      duration_hours: course.duration_hours || 3,
+      duration_minutes: course.duration_minutes || 0
     });
     setEditingId(course.id);
     setShowForm(true);
@@ -102,7 +106,7 @@ const CourseManagement = () => {
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h2>과목 관리</h2>
-        <button className="btn" onClick={() => { setShowForm(true); setEditingId(null); setFormData({ title: '', code: '', section: 1, instructor_id: '', semester_id: '', department_id: '', room: '' }); }}>
+        <button className="btn" onClick={() => { setShowForm(true); setEditingId(null); setFormData({ title: '', code: '', section: 1, instructor_id: '', semester_id: '', department_id: '', room: '', duration_hours: 3, duration_minutes: 0 }); }}>
           + 과목 추가
         </button>
       </div>
@@ -200,9 +204,46 @@ const CourseManagement = () => {
                 onChange={(e) => setFormData({ ...formData, room: e.target.value })}
               />
             </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem' }}>수업 시간</label>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <select
+                  className="input"
+                  value={formData.duration_hours}
+                  onChange={(e) => setFormData({ ...formData, duration_hours: parseInt(e.target.value) })}
+                  required
+                  style={{ flex: 1 }}
+                >
+                  <option value={1}>1시간</option>
+                  <option value={2}>2시간</option>
+                  <option value={3}>3시간</option>
+                  <option value={4}>4시간</option>
+                  <option value={5}>5시간</option>
+                  <option value={6}>6시간</option>
+                </select>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    const newMinutes = formData.duration_minutes === 30 ? 0 : 30;
+                    setFormData({ ...formData, duration_minutes: newMinutes });
+                  }}
+                  style={{
+                    backgroundColor: formData.duration_minutes === 30 ? 'var(--primary)' : 'var(--gray-300)',
+                    color: formData.duration_minutes === 30 ? 'white' : 'var(--text)',
+                    padding: '0.5rem 1rem'
+                  }}
+                >
+                  {formData.duration_minutes === 30 ? '30분 제거' : '+30분'}
+                </button>
+              </div>
+              <div style={{ marginTop: '0.5rem', padding: '0.5rem', backgroundColor: 'var(--gray-100)', borderRadius: '0.25rem', fontSize: '0.875rem' }}>
+                총 수업 시간: {formData.duration_hours}시간 {formData.duration_minutes > 0 ? '30분' : ''}
+              </div>
+            </div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button type="submit" className="btn">저장</button>
-              <button type="button" className="btn" onClick={() => { setShowForm(false); setEditingId(null); setFormData({ title: '', code: '', section: 1, instructor_id: '', semester_id: '', department_id: '', room: '' }); }}>
+              <button type="button" className="btn" onClick={() => { setShowForm(false); setEditingId(null); setFormData({ title: '', code: '', section: 1, instructor_id: '', semester_id: '', department_id: '', room: '', duration_hours: 3, duration_minutes: 0 }); }}>
                 취소
               </button>
             </div>
