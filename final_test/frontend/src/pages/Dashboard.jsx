@@ -11,14 +11,20 @@ const Dashboard = () => {
   const fetchedTokenRef = useRef(null);
 
   useEffect(() => {
+    console.log('🔵 Dashboard useEffect 실행됨');
+    console.log('🔵 accessToken 존재:', !!accessToken);
+    console.log('🔵 accessToken 값:', accessToken ? accessToken.substring(0, 20) + '...' : '없음');
+    
     if (!accessToken) {
+      console.log('🔴 accessToken이 없어서 종료');
       setLoading(false);
       fetchedTokenRef.current = null;
       return;
     }
 
     // 같은 토큰으로 이미 fetch한 경우 스킵
-    if (fetchedTokenRef.current === accessToken) {
+    if (fetchedTokenRef.current === accessToken && dashboardData) {
+      console.log('🟡 이미 같은 토큰으로 fetch했음, 스킵');
       setLoading(false);
       return;
     }
@@ -29,27 +35,43 @@ const Dashboard = () => {
 
     const fetchDashboard = async () => {
       try {
+        console.log('🟢 API 호출 시작: /api/dashboard');
         const response = await axios.get('/api/dashboard', {
           headers: {
             Authorization: `Bearer ${accessToken}`
           }
         });
         
+        console.log('✅ API 응답 받음');
+        console.log('✅ Status:', response.status);
+        console.log('✅ Data:', response.data);
+        
         if (!cancelled && fetchedTokenRef.current === accessToken) {
-          console.log('Dashboard data received:', response.data);
-          setDashboardData(response.data);
+          if (response.data && response.data.role) {
+            console.log('✅ 유효한 데이터, role:', response.data.role);
+            setDashboardData(response.data);
+          } else {
+            console.error('❌ 유효하지 않은 데이터:', response.data);
+            setDashboardData({ role: 'Unknown', error: true });
+          }
           setLoading(false);
         }
       } catch (error) {
         if (!cancelled) {
-          console.error('Dashboard fetch error:', error);
+          console.error('❌ API 호출 실패');
+          console.error('❌ Error:', error);
+          console.error('❌ Response:', error.response);
+          console.error('❌ Status:', error.response?.status);
+          console.error('❌ Data:', error.response?.data);
+          
           if (error.response?.status === 401) {
+            console.log('🔴 401 에러 - 로그아웃');
             fetchedTokenRef.current = null;
             logout();
             navigate('/login');
           } else {
+            console.log('🟡 다른 에러 - 에러 상태 설정');
             setLoading(false);
-            // 에러가 발생해도 기본 구조는 표시
             setDashboardData({ role: 'Unknown', error: true });
           }
         }
@@ -95,6 +117,14 @@ const Dashboard = () => {
               {!dashboardData.role && '대시보드'}
             </h2>
 
+            {dashboardData.role === 'Admin' && (
+              <div style={{ marginBottom: '1rem' }}>
+                <button className="btn" onClick={() => navigate('/admin')} style={{ width: '100%' }}>
+                  관리자 페이지로 이동
+                </button>
+              </div>
+            )}
+
             {dashboardData.error ? (
               <div>
                 <p style={{ color: '#ff6b6b' }}>데이터를 불러오는 중 오류가 발생했습니다.</p>
@@ -106,9 +136,11 @@ const Dashboard = () => {
                 <p>출석 기록: {dashboardData.attendances || 0}개</p>
                 <p>대기 중인 공결: {dashboardData.pendingExcuses || 0}개</p>
                 <p>읽지 않은 알림: {dashboardData.unreadNotifications || 0}개</p>
-                {dashboardData.courses === 0 && (
-                  <p style={{ marginTop: '1rem', color: '#888' }}>아직 수강 중인 과목이 없습니다.</p>
-                )}
+                <div style={{ marginTop: '1rem' }}>
+                  <button className="btn" onClick={() => navigate('/student')} style={{ width: '100%' }}>
+                    학생 페이지로 이동
+                  </button>
+                </div>
               </div>
             ) : dashboardData.role === 'Instructor' ? (
               <div>
@@ -117,9 +149,11 @@ const Dashboard = () => {
                 <p>승인 대기 공결: {dashboardData.pendingExcuses || 0}개</p>
                 <p>승인 대기 이의제기: {dashboardData.pendingAppeals || 0}개</p>
                 <p>읽지 않은 알림: {dashboardData.unreadNotifications || 0}개</p>
-                {dashboardData.courses === 0 && (
-                  <p style={{ marginTop: '1rem', color: '#888' }}>아직 담당 과목이 없습니다.</p>
-                )}
+                <div style={{ marginTop: '1rem' }}>
+                  <button className="btn" onClick={() => navigate('/instructor')} style={{ width: '100%' }}>
+                    교원 페이지로 이동
+                  </button>
+                </div>
               </div>
             ) : dashboardData.role === 'Admin' ? (
               <div>

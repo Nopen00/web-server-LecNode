@@ -2,6 +2,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import InstructorDashboard from './pages/instructor/InstructorDashboard';
+import StudentDashboard from './pages/student/StudentDashboard';
 import PrivateRoute from './components/PrivateRoute';
 
 function App() {
@@ -15,6 +18,30 @@ function App() {
             element={
               <PrivateRoute>
                 <Dashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <PrivateRoute>
+                <AdminDashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/instructor"
+            element={
+              <PrivateRoute>
+                <InstructorDashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/student"
+            element={
+              <PrivateRoute>
+                <StudentDashboard />
               </PrivateRoute>
             }
           />

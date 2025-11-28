@@ -1,4 +1,4 @@
-import { Enrollment, User, Course } from '../models/index.js';
+import { Enrollment, User, Course, Department, Semester } from '../models/index.js';
 import * as XLSX from 'xlsx';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -12,10 +12,56 @@ const __dirname = dirname(__filename);
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
+// 학생의 수강 과목 조회
+export const getMyEnrollments = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const enrollments = await Enrollment.findAll({
+      where: { user_id: userId },
+      include: [{
+        model: Course,
+        as: 'course',
+        include: [
+          {
+            model: User,
+            as: 'instructor',
+            attributes: ['id', 'name', 'email']
+          },
+          {
+            model: Department,
+            as: 'department',
+            attributes: ['id', 'name', 'code']
+          },
+          {
+            model: Semester,
+            as: 'semester',
+            attributes: ['id', 'year', 'term']
+          }
+        ]
+      }]
+    });
+    res.json(enrollments);
+  } catch (error) {
+    next(error);
+  }
+};
+
 // 수강생 목록 조회
 export const getEnrollmentsByCourse = async (req, res, next) => {
   try {
     const { courseId } = req.params;
+    
+    // 과목 확인
+    const course = await Course.findByPk(courseId);
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    // 교원은 자신의 과목만 조회 가능
+    if (req.user.role === 'Instructor' && course.instructor_id !== req.user.id) {
+      return res.status(403).json({ error: 'You can only view enrollments for your own courses' });
+    }
+
     const enrollments = await Enrollment.findAll({
       where: { course_id: courseId },
       include: [{
@@ -36,13 +82,39 @@ export const createEnrollment = async (req, res, next) => {
     const { courseId } = req.params;
     const { user_id, role } = req.body;
 
-    if (!user_id) {
-      return res.status(400).json({ error: 'User ID is required' });
+    // 과목 확인
+    const course = await Course.findByPk(courseId);
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    // 사용자 ID 결정: 학생은 자신의 ID, 관리자/교원은 body의 user_id 사용
+    let targetUserId;
+    if (req.user.role === 'Student') {
+      // 학생은 자신만 등록 가능
+      targetUserId = req.user.id;
+    } else if (req.user.role === 'Admin') {
+      // 관리자는 user_id 필수
+      if (!user_id) {
+        return res.status(400).json({ error: 'User ID is required' });
+      }
+      targetUserId = user_id;
+    } else if (req.user.role === 'Instructor') {
+      // 교원은 자신의 과목에만 등록 가능하지만, 이제는 학생이 직접 등록하므로 제거
+      return res.status(403).json({ error: 'Instructors cannot enroll students. Students must enroll themselves.' });
+    } else {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // 학생인지 확인
+    const student = await User.findByPk(targetUserId);
+    if (!student || student.role !== 'Student') {
+      return res.status(400).json({ error: 'User must be a student' });
     }
 
     // 중복 확인
     const existing = await Enrollment.findOne({
-      where: { course_id: courseId, user_id }
+      where: { course_id: courseId, user_id: targetUserId }
     });
 
     if (existing) {
@@ -51,7 +123,7 @@ export const createEnrollment = async (req, res, next) => {
 
     const enrollment = await Enrollment.create({
       course_id: courseId,
-      user_id,
+      user_id: targetUserId,
       role: role || 'student'
     });
 
@@ -73,10 +145,26 @@ export const createEnrollment = async (req, res, next) => {
 export const deleteEnrollment = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const enrollment = await Enrollment.findByPk(id);
+    const enrollment = await Enrollment.findByPk(id, {
+      include: [{
+        model: Course,
+        as: 'course'
+      }]
+    });
     
     if (!enrollment) {
       return res.status(404).json({ error: 'Enrollment not found' });
+    }
+
+    // 학생은 자신의 수강신청만 취소 가능
+    if (req.user.role === 'Student' && enrollment.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'You can only cancel your own enrollment' });
+    }
+
+    // 관리자는 모든 수강신청 취소 가능
+    // 교원은 이제 수강신청 취소 불가 (학생이 직접 해야 함)
+    if (req.user.role === 'Instructor') {
+      return res.status(403).json({ error: 'Instructors cannot cancel enrollments. Students must cancel themselves.' });
     }
 
     await enrollment.destroy();

@@ -5,6 +5,10 @@ export const getDashboard = async (req, res, next) => {
   try {
     const user = req.user;
 
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
     if (user.role === 'Student') {
       // 학생 대시보드
       const enrollments = await Enrollment.findAll({
@@ -57,9 +61,11 @@ export const getDashboard = async (req, res, next) => {
       });
       const courseIds = courses.map(c => c.id);
 
-      const sessions = await ClassSession.findAll({
-        where: { course_id: { [Op.in]: courseIds } }
-      });
+      const sessions = courseIds.length > 0
+        ? await ClassSession.findAll({
+            where: { course_id: { [Op.in]: courseIds } }
+          })
+        : [];
 
       const pendingExcuses = courseIds.length > 0
         ? await ExcuseRequest.count({
@@ -125,8 +131,12 @@ export const getDashboard = async (req, res, next) => {
         totalAttendances,
         recentAuditLogs
       });
+    } else {
+      // 알 수 없는 역할
+      return res.status(400).json({ error: 'Unknown user role' });
     }
   } catch (error) {
+    console.error('Dashboard error:', error);
     next(error);
   }
 };

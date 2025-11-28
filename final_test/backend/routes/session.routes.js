@@ -15,14 +15,14 @@ const router = express.Router();
 
 router.use(authenticate);
 
-router.get('/courses/:courseId', getSessionsByCourse);
-router.post('/courses/:courseId', instructorOrAdmin, createSession);
-router.put('/:id', instructorOrAdmin, updateSession);
-router.delete('/:id', instructorOrAdmin, deleteSession);
-router.post('/:id/open', instructorOrAdmin, openSession);
-router.post('/:id/pause', instructorOrAdmin, pauseSession);
-router.post('/:id/close', instructorOrAdmin, closeSession);
-router.get('/:id/attendance-code', instructorOrAdmin, getAttendanceCode);
+router.get('/courses/:courseId/sessions', getSessionsByCourse);
+router.post('/courses/:courseId/sessions', instructorOrAdmin, createSession);
+router.put('/sessions/:id', instructorOrAdmin, updateSession);
+router.delete('/sessions/:id', instructorOrAdmin, deleteSession);
+router.post('/sessions/:id/open', instructorOrAdmin, openSession);
+router.post('/sessions/:id/pause', instructorOrAdmin, pauseSession);
+router.post('/sessions/:id/close', instructorOrAdmin, closeSession);
+router.get('/sessions/:id/attendance-code', instructorOrAdmin, getAttendanceCode);
 
 export default router;
 
