@@ -11,7 +11,7 @@ export const getNotifications = async (req, res, next) => {
 
     const notifications = await Notification.findAll({
       where,
-      order: [['created_at', 'DESC']],
+      order: [['createdAt', 'DESC']],
       limit: 50
     });
 

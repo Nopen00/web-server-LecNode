@@ -11,7 +11,7 @@ export const getPollsByCourse = async (req, res, next) => {
         as: 'instructor',
         attributes: ['id', 'name', 'email']
       }],
-      order: [['created_at', 'DESC']]
+      order: [['createdAt', 'DESC']]
     });
     res.json(polls);
   } catch (error) {
@@ -148,6 +148,11 @@ export const getPollResults = async (req, res, next) => {
     const agreeCount = votes.filter(v => v.vote === 'agree').length;
     const disagreeCount = votes.filter(v => v.vote === 'disagree').length;
 
+    // 현재 사용자의 투표 확인 (학생인 경우만)
+    const myVote = req.user.role === 'Student' 
+      ? votes.find(v => v.student_id === req.user.id || v.student?.id === req.user.id)
+      : null;
+
     res.json({
       poll: {
         id: poll.id,
@@ -158,6 +163,7 @@ export const getPollResults = async (req, res, next) => {
       total: votes.length,
       agree: agreeCount,
       disagree: disagreeCount,
+      myVote: myVote ? { vote: myVote.vote } : null,
       votes
     });
   } catch (error) {

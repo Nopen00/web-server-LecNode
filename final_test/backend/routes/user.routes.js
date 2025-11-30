@@ -5,7 +5,9 @@ import {
   createUser,
   updateUser,
   deleteUser,
-  updateUserRole
+  updateUserRole,
+  importUsers,
+  uploadMiddleware
 } from '../controllers/user.controller.js';
 import { authenticate, adminOnly } from '../middleware/auth.js';
 import { auditMiddleware } from '../middleware/auditLog.js';
@@ -19,6 +21,7 @@ router.use(authenticate);
 router.get('/', adminOnly, getUsers);
 router.get('/:id', adminOnly, getUserById);
 router.post('/', adminOnly, createUser);
+router.post('/import', adminOnly, uploadMiddleware, importUsers);
 router.put('/:id', adminOnly, updateUser);
 router.delete('/:id', adminOnly, auditMiddleware('user_delete', 'User', (req) => req.params.id), deleteUser);
 router.put('/:id/role', adminOnly, auditMiddleware('role_change', 'User', (req) => req.params.id), updateUserRole);

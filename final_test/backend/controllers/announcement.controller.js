@@ -1,8 +1,37 @@
-import { Announcement, Course, User } from '../models/index.js';
+import { Announcement, Course, User, Enrollment } from '../models/index.js';
 
 export const getAnnouncementsByCourse = async (req, res, next) => {
   try {
-    const { courseId } = req.params;
+    const courseId = parseInt(req.params.courseId);
+    
+    if (isNaN(courseId)) {
+      return res.status(400).json({ error: 'Invalid course ID' });
+    }
+    
+    // 과목 존재 확인
+    const course = await Course.findByPk(courseId);
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    // 학생인 경우 수강 신청 확인
+    if (req.user.role === 'Student') {
+      const enrollment = await Enrollment.findOne({
+        where: { 
+          course_id: courseId, 
+          user_id: req.user.id 
+        }
+      });
+      if (!enrollment) {
+        return res.status(403).json({ error: 'You are not enrolled in this course' });
+      }
+    }
+
+    // 교원인 경우 자신의 과목만 조회 가능
+    if (req.user.role === 'Instructor' && course.instructor_id !== req.user.id) {
+      return res.status(403).json({ error: 'You can only view announcements for your own courses' });
+    }
+
     const announcements = await Announcement.findAll({
       where: { course_id: courseId },
       include: [{
@@ -10,10 +39,11 @@ export const getAnnouncementsByCourse = async (req, res, next) => {
         as: 'instructor',
         attributes: ['id', 'name', 'email']
       }],
-      order: [['is_pinned', 'DESC'], ['created_at', 'DESC']]
+      order: [['is_pinned', 'DESC'], ['createdAt', 'DESC']]
     });
     res.json(announcements);
   } catch (error) {
+    console.error('Error in getAnnouncementsByCourse:', error);
     next(error);
   }
 };

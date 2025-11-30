@@ -25,7 +25,7 @@ export const getMessages = async (req, res, next) => {
         { model: User, as: 'sender', attributes: ['id', 'name', 'email'] },
         { model: User, as: 'receiver', attributes: ['id', 'name', 'email'] }
       ],
-      order: [['created_at', 'DESC']]
+      order: [['createdAt', 'DESC']]
     });
 
     res.json(messages);

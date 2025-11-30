@@ -12,8 +12,10 @@ const DepartmentManagement = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchDepartments();
-  }, []);
+    if (accessToken) {
+      fetchDepartments();
+    }
+  }, [accessToken]);
 
   const fetchDepartments = async () => {
     try {

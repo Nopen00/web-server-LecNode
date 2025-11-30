@@ -23,6 +23,11 @@ const CourseManagement = () => {
     duration_minutes: 0
   });
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [showExcelUpload, setShowExcelUpload] = useState(false);
+  const [excelFile, setExcelFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -106,14 +111,167 @@ const CourseManagement = () => {
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h2>과목 관리</h2>
-        <button className="btn" onClick={() => { setShowForm(true); setEditingId(null); setFormData({ title: '', code: '', section: 1, instructor_id: '', semester_id: '', department_id: '', room: '', duration_hours: 3, duration_minutes: 0 }); }}>
-          + 과목 추가
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="btn" onClick={() => { setShowExcelUpload(!showExcelUpload); setError(''); setSuccess(''); setUploadResult(null); }}>
+            {showExcelUpload ? '취소' : '엑셀 일괄 등록'}
+          </button>
+          <button className="btn" onClick={() => { setShowForm(true); setEditingId(null); setFormData({ title: '', code: '', section: 1, instructor_id: '', semester_id: '', department_id: '', room: '', duration_hours: 3, duration_minutes: 0 }); }}>
+            + 과목 추가
+          </button>
+        </div>
       </div>
 
       {error && (
         <div style={{ padding: '0.75rem', marginBottom: '1rem', backgroundColor: '#fee2e2', color: '#dc2626', borderRadius: '0.375rem' }}>
           {error}
+        </div>
+      )}
+
+      {success && (
+        <div style={{ padding: '0.75rem', marginBottom: '1rem', backgroundColor: '#dcfce7', color: '#16a34a', borderRadius: '0.375rem' }}>
+          {success}
+        </div>
+      )}
+
+      {showExcelUpload && (
+        <div style={{ marginBottom: '2rem', padding: '1.5rem', backgroundColor: 'var(--gray-50)', borderRadius: '0.375rem', border: '2px solid var(--primary)' }}>
+          <h3 style={{ marginBottom: '1rem' }}>엑셀 일괄 등록</h3>
+          <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: 'white', borderRadius: '0.375rem' }}>
+            <h4 style={{ marginBottom: '0.5rem' }}>엑셀 파일 형식</h4>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+              다음 컬럼을 포함해야 합니다:
+            </p>
+            <ul style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginLeft: '1.5rem', marginBottom: '0.5rem' }}>
+              <li><strong>title</strong> (필수): 과목명</li>
+              <li><strong>code</strong> (필수): 과목 코드</li>
+              <li><strong>section</strong> (필수): 분반 (1-4)</li>
+              <li><strong>instructor_id</strong> 또는 <strong>instructor_email</strong> (필수): 교원 ID 또는 이메일</li>
+              <li><strong>semester_id</strong> (필수): 학기 ID</li>
+              <li><strong>department_id</strong> 또는 <strong>department_code</strong> (필수): 학과 ID 또는 코드</li>
+              <li><strong>room</strong> (선택): 강의실</li>
+              <li><strong>duration_hours</strong> (선택): 수업 시간 (기본 3)</li>
+              <li><strong>duration_minutes</strong> (선택): 추가 시간 (0 또는 30, 기본 0)</li>
+            </ul>
+            <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: 'var(--gray-50)', borderRadius: '0.375rem', fontSize: '0.875rem' }}>
+              <strong>예시:</strong>
+              <table style={{ width: '100%', marginTop: '0.5rem', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>title</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>code</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>section</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>instructor_email</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>semester_id</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>department_code</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: '0.5rem' }}>웹서버프로그래밍</td>
+                    <td style={{ padding: '0.5rem' }}>HBJ00052</td>
+                    <td style={{ padding: '0.5rem' }}>1</td>
+                    <td style={{ padding: '0.5rem' }}>instructor@school.edu</td>
+                    <td style={{ padding: '0.5rem' }}>1</td>
+                    <td style={{ padding: '0.5rem' }}>CS</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            setError('');
+            setSuccess('');
+            setUploadResult(null);
+
+            if (!excelFile) {
+              setError('엑셀 파일을 선택해주세요.');
+              return;
+            }
+
+            const fileName = excelFile.name.toLowerCase();
+            if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+              setError('엑셀 파일(.xlsx, .xls)만 업로드 가능합니다.');
+              return;
+            }
+
+            setUploading(true);
+
+            try {
+              const formData = new FormData();
+              formData.append('file', excelFile);
+
+              const response = await axios.post('/api/courses/import', formData, {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  'Content-Type': 'multipart/form-data'
+                }
+              });
+
+              setUploadResult(response.data);
+              setSuccess(`엑셀 업로드가 완료되었습니다. (성공: ${response.data.success_count}건, 실패: ${response.data.error_count}건)`);
+              setExcelFile(null);
+              setShowExcelUpload(false);
+              fetchData();
+            } catch (error) {
+              console.error('Failed to upload excel:', error);
+              setError(error.response?.data?.error || '엑셀 업로드에 실패했습니다.');
+            } finally {
+              setUploading(false);
+            }
+          }}>
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                엑셀 파일 선택 *
+              </label>
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={(e) => setExcelFile(e.target.files[0])}
+                style={{ width: '100%', padding: '0.5rem' }}
+              />
+              {excelFile && (
+                <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                  선택된 파일: {excelFile.name} ({(excelFile.size / 1024).toFixed(2)}KB)
+                </div>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              className="btn"
+              disabled={uploading || !excelFile}
+              style={{ width: '100%' }}
+            >
+              {uploading ? '업로드 중...' : '업로드하기'}
+            </button>
+          </form>
+
+          {uploadResult && (
+            <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'white', borderRadius: '0.375rem' }}>
+              <h4 style={{ marginBottom: '0.75rem' }}>업로드 결과</h4>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <strong>성공:</strong> {uploadResult.success_count}건
+              </div>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <strong>실패:</strong> {uploadResult.error_count}건
+              </div>
+              {uploadResult.error_count > 0 && (
+                <div style={{ marginTop: '1rem' }}>
+                  <strong>오류 상세:</strong>
+                  <div style={{ marginTop: '0.5rem', maxHeight: '200px', overflowY: 'auto', fontSize: '0.875rem' }}>
+                    {uploadResult.results.errors.map((err, idx) => (
+                      <div key={idx} style={{ padding: '0.5rem', marginBottom: '0.25rem', backgroundColor: '#fee2e2', borderRadius: '0.25rem' }}>
+                        <div><strong>행:</strong> {JSON.stringify(err.row)}</div>
+                        <div><strong>오류:</strong> {err.error}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

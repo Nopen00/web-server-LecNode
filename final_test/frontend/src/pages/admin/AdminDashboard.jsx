@@ -5,6 +5,10 @@ import DepartmentManagement from './DepartmentManagement';
 import SemesterManagement from './SemesterManagement';
 import CourseManagement from './CourseManagement';
 import EnrollmentManagement from './EnrollmentManagement';
+import UserManagement from './UserManagement';
+import AuditLogView from './AuditLogView';
+import SystemReport from './SystemReport';
+import SystemSettings from './SystemSettings';
 
 const AdminDashboard = () => {
   const { logout } = useAuth();
@@ -79,6 +83,58 @@ const AdminDashboard = () => {
           >
             수강신청 관리
           </button>
+          <button
+            className="btn"
+            onClick={() => setActiveTab('users')}
+            style={{
+              backgroundColor: activeTab === 'users' ? 'var(--primary)' : 'transparent',
+              color: activeTab === 'users' ? 'white' : 'var(--text)',
+              border: 'none',
+              borderRadius: '0.375rem 0.375rem 0 0',
+              padding: '0.75rem 1rem'
+            }}
+          >
+            사용자 관리
+          </button>
+          <button
+            className="btn"
+            onClick={() => setActiveTab('audits')}
+            style={{
+              backgroundColor: activeTab === 'audits' ? 'var(--primary)' : 'transparent',
+              color: activeTab === 'audits' ? 'white' : 'var(--text)',
+              border: 'none',
+              borderRadius: '0.375rem 0.375rem 0 0',
+              padding: '0.75rem 1rem'
+            }}
+          >
+            감사 로그
+          </button>
+          <button
+            className="btn"
+            onClick={() => setActiveTab('reports')}
+            style={{
+              backgroundColor: activeTab === 'reports' ? 'var(--primary)' : 'transparent',
+              color: activeTab === 'reports' ? 'white' : 'var(--text)',
+              border: 'none',
+              borderRadius: '0.375rem 0.375rem 0 0',
+              padding: '0.75rem 1rem'
+            }}
+          >
+            시스템 리포트
+          </button>
+          <button
+            className="btn"
+            onClick={() => setActiveTab('settings')}
+            style={{
+              backgroundColor: activeTab === 'settings' ? 'var(--primary)' : 'transparent',
+              color: activeTab === 'settings' ? 'white' : 'var(--text)',
+              border: 'none',
+              borderRadius: '0.375rem 0.375rem 0 0',
+              padding: '0.75rem 1rem'
+            }}
+          >
+            시스템 설정
+          </button>
         </div>
       </div>
 
@@ -86,6 +142,10 @@ const AdminDashboard = () => {
       {activeTab === 'semesters' && <SemesterManagement />}
       {activeTab === 'courses' && <CourseManagement />}
       {activeTab === 'enrollments' && <EnrollmentManagement />}
+      {activeTab === 'users' && <UserManagement />}
+      {activeTab === 'audits' && <AuditLogView />}
+      {activeTab === 'reports' && <SystemReport />}
+      {activeTab === 'settings' && <SystemSettings />}
     </div>
   );
 };

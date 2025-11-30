@@ -33,6 +33,8 @@ import fileRoutes from './routes/file.routes.js';
 import auditRoutes from './routes/audit.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
+import adminRoutes from './routes/admin.routes.js';
+import systemRoutes from './routes/system.routes.js';
 
 // 에러 핸들러
 import { errorHandler } from './middleware/errorHandler.js';
@@ -43,7 +45,19 @@ const PORT = process.env.PORT || 3000;
 // 미들웨어 설정
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: function (origin, callback) {
+    // 개발 환경에서는 모든 origin 허용 (네트워크 접속을 위해)
+    if (process.env.NODE_ENV === 'development' || !origin) {
+      return callback(null, true);
+    }
+    // 프로덕션에서는 지정된 origin만 허용
+    const allowedOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:5173'];
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 app.use(express.json());
@@ -73,6 +87,8 @@ app.use('/api/files', fileRoutes);
 app.use('/api/audits', auditRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/system', systemRoutes);
 
 // 헬스 체크
 app.get('/api/health', (req, res) => {
@@ -88,8 +104,10 @@ app.use((req, res) => {
 });
 
 // 서버 시작
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
+  console.log(`Local: http://localhost:${PORT}`);
+  console.log(`Network: http://[your-ip]:${PORT}`);
 });
 
 export default app;

@@ -18,23 +18,21 @@ export const getAuditLogs = async (req, res, next) => {
       where.user_id = user_id;
     }
 
-    if (start_date || end_date) {
-      where.created_at = {};
-      if (start_date) {
-        where.created_at[Op.gte] = new Date(start_date);
-      }
-      if (end_date) {
-        where.created_at[Op.lte] = new Date(end_date);
-      }
-    }
-
     // 1년 이내 데이터만 조회
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-    where.created_at = {
-      ...where.created_at,
+    where.createdAt = {
       [Op.gte]: oneYearAgo
     };
+
+    if (start_date || end_date) {
+      if (start_date) {
+        where.createdAt[Op.gte] = new Date(start_date);
+      }
+      if (end_date) {
+        where.createdAt[Op.lte] = new Date(end_date);
+      }
+    }
 
     const logs = await AuditLog.findAll({
       where,
@@ -43,7 +41,7 @@ export const getAuditLogs = async (req, res, next) => {
         as: 'user',
         attributes: ['id', 'name', 'email', 'role']
       }],
-      order: [['created_at', 'DESC']],
+      order: [['createdAt', 'DESC']],
       limit: 1000
     });
 

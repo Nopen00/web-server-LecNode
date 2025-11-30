@@ -67,7 +67,7 @@ export const getEnrollmentsByCourse = async (req, res, next) => {
       include: [{
         model: User,
         as: 'user',
-        attributes: ['id', 'name', 'email', 'student_id']
+        attributes: ['id', 'name', 'email', 'student_id', 'role']
       }]
     });
     res.json(enrollments);

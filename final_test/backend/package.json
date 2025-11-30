@@ -9,7 +9,10 @@
     "dev": "nodemon server.js",
     "db:migrate": "node scripts/migrate.js",
     "db:seed": "node scripts/seed.js",
-    "db:update-passwords": "node scripts/update-passwords.js"
+    "db:update-passwords": "node scripts/update-passwords.js",
+    "create-sample-excel": "node scripts/createSampleExcel.js",
+    "create-sample-excel-db": "node scripts/createSampleExcelFromDB.js",
+    "create-test-excel": "node scripts/createTestExcelFiles.js"
   },
   "keywords": ["attendance", "school", "express"],
   "author": "",

@@ -16,6 +16,7 @@ import AttendancePolicy from './AttendancePolicy.js';
 import AuditLog from './AuditLog.js';
 import File from './File.js';
 import Notification from './Notification.js';
+import SystemSetting from './SystemSetting.js';
 
 // 모델 간 관계 설정
 const models = {
@@ -35,7 +36,8 @@ const models = {
   AttendancePolicy,
   AuditLog,
   File,
-  Notification
+  Notification,
+  SystemSetting
 };
 
 // 관계 설정
@@ -145,7 +147,8 @@ export {
   AttendancePolicy,
   AuditLog,
   File,
-  Notification
+  Notification,
+  SystemSetting
 };
 
 export default models;

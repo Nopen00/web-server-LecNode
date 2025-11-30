@@ -1,4 +1,4 @@
-import { ClassSession, Course, Enrollment, Attendance } from '../models/index.js';
+import { ClassSession, Course, Enrollment, Attendance, Notification, AttendancePolicy } from '../models/index.js';
 import { generateAttendanceCode } from '../utils/attendanceCode.js';
 import { createAuditLog } from '../middleware/auditLog.js';
 import { Op } from 'sequelize';
@@ -306,6 +306,24 @@ export const openSession = async (req, res, next) => {
       { status: 'open', attendance_code: session.attendance_code }
     );
 
+    // 수강생들에게 출석 시작 알림 생성
+    const enrollments = await Enrollment.findAll({
+      where: { course_id: session.course_id }
+    });
+
+    const notificationPromises = enrollments.map(enrollment => 
+      Notification.create({
+        user_id: enrollment.user_id,
+        type: 'attendance_open',
+        title: `출석 체크가 시작되었습니다`,
+        content: `${session.course.title} ${session.week}주차 ${session.session_number}회차 출석 체크가 시작되었습니다.`,
+        related_type: 'ClassSession',
+        related_id: session.id
+      })
+    );
+
+    await Promise.all(notificationPromises);
+
     res.json(session);
   } catch (error) {
     next(error);
@@ -382,6 +400,20 @@ export const closeSession = async (req, res, next) => {
     // 출석하지 않은 학생들 자동 결석 처리
     const absentStudentIds = enrolledStudentIds.filter(sid => !attendedStudentIds.includes(sid));
     
+    // 출석 정책 가져오기
+    const policy = await AttendancePolicy.findOne({
+      where: { course_id: session.course_id }
+    });
+
+    const warningThreshold = policy?.absence_warning_threshold || 2;
+    const dangerThreshold = policy?.absence_danger_threshold || 3;
+
+    // 해당 과목의 모든 세션 ID 가져오기
+    const allSessions = await ClassSession.findAll({
+      where: { course_id: session.course_id }
+    });
+    const allSessionIds = allSessions.map(s => s.id);
+
     for (const studentId of absentStudentIds) {
       // 이미 출석 기록이 있는지 확인 (중복 방지)
       const existing = await Attendance.findOne({
@@ -396,6 +428,38 @@ export const closeSession = async (req, res, next) => {
           checked_at: new Date(),
           late_minutes: 0
         });
+
+        // 결석 경고 알림 생성
+        const allAttendances = await Attendance.findAll({
+          where: {
+            session_id: { [Op.in]: allSessionIds },
+            student_id: studentId,
+            status: 3 // 결석만 카운트
+          }
+        });
+
+        const absentCount = allAttendances.length;
+
+        // 정확히 경고 횟수일 때만 알림 생성 (중복 방지)
+        if (absentCount === warningThreshold) {
+          await Notification.create({
+            user_id: studentId,
+            type: 'absence_warning',
+            title: `결석 경고 (${absentCount}회)`,
+            content: `${session.course.title}에서 결석이 ${absentCount}회 누적되었습니다. 출석에 주의해주세요.`,
+            related_type: 'Course',
+            related_id: session.course_id
+          });
+        } else if (absentCount === dangerThreshold) {
+          await Notification.create({
+            user_id: studentId,
+            type: 'absence_warning',
+            title: `결석 위험 (${absentCount}회)`,
+            content: `${session.course.title}에서 결석이 ${absentCount}회 누적되었습니다. 계속 결석 시 성적에 불이익이 있을 수 있습니다.`,
+            related_type: 'Course',
+            related_id: session.course_id
+          });
+        }
       }
     }
 
@@ -408,6 +472,20 @@ export const closeSession = async (req, res, next) => {
       { status: oldStatus },
       { status: 'closed', auto_absent_count: absentStudentIds.length }
     );
+
+    // 수강생들에게 출석 종료 알림 생성
+    const notificationPromises = enrollments.map(enrollment => 
+      Notification.create({
+        user_id: enrollment.user_id,
+        type: 'attendance_close',
+        title: `출석 체크가 종료되었습니다`,
+        content: `${session.course.title} ${session.week}주차 ${session.session_number}회차 출석 체크가 종료되었습니다.`,
+        related_type: 'ClassSession',
+        related_id: session.id
+      })
+    );
+
+    await Promise.all(notificationPromises);
 
     res.json(session);
   } catch (error) {

@@ -1,4 +1,4 @@
-import { Appeal, Attendance, User, ClassSession } from '../models/index.js';
+import { Appeal, Attendance, User, ClassSession, Course } from '../models/index.js';
 
 // 이의제기 신청
 export const createAppeal = async (req, res, next) => {
@@ -74,6 +74,32 @@ export const getAppeals = async (req, res, next) => {
       where.student_id = req.user.id;
     }
 
+    // 교원인 경우 자신의 과목만
+    if (req.user.role === 'Instructor') {
+      const appeals = await Appeal.findAll({
+        where,
+        include: [
+          {
+            model: Attendance,
+            as: 'attendance',
+            include: [{
+              model: ClassSession,
+              as: 'session',
+              include: [{
+                model: Course,
+                as: 'course',
+                where: { instructor_id: req.user.id }
+              }],
+              attributes: ['id', 'week', 'session_number', 'start_at', 'course_id']
+            }]
+          },
+          { model: User, as: 'student', attributes: ['id', 'name', 'student_id', 'email'] }
+        ],
+        order: [['submitted_at', 'DESC']]
+      });
+      return res.json(appeals);
+    }
+
     const appeals = await Appeal.findAll({
       where,
       include: [
@@ -131,9 +157,25 @@ export const updateAppeal = async (req, res, next) => {
       return res.status(400).json({ error: 'Invalid status' });
     }
 
-    const appeal = await Appeal.findByPk(id);
+    const appeal = await Appeal.findByPk(id, {
+      include: [{
+        model: Attendance,
+        as: 'attendance',
+        include: [{
+          model: ClassSession,
+          as: 'session',
+          include: [{ model: Course, as: 'course' }]
+        }]
+      }]
+    });
+    
     if (!appeal) {
       return res.status(404).json({ error: 'Appeal not found' });
+    }
+
+    // 교원은 자신의 과목만 처리 가능
+    if (req.user.role === 'Instructor' && appeal.attendance?.session?.course?.instructor_id !== req.user.id) {
+      return res.status(403).json({ error: 'You can only process appeals for your own courses' });
     }
 
     appeal.status = status;
